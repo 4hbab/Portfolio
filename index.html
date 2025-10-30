@@ -11,7 +11,7 @@
     <div class="container">
         <header class="header">
             <div class="logo">Portfolio</div>
-            <button class="theme-toggle" onclick="toggleTheme()">
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light theme">
                 <i class="fas fa-moon"></i>
             </button>
         </header>
@@ -24,7 +24,7 @@
                     <p>Backend focused engineer setting on building large scale production ready applications</p>
                 </div>
                 <div class="profile-pic-container">
-                    <img src="./assets/2(1).jpg" alt="Alex Chen Profile Picture" class="profile-pic">
+                    <img src="./assets/dp.jpg" alt="Alex Chen Profile Picture" class="profile-pic">
                 </div>
             </section>
 
@@ -32,48 +32,51 @@
             <section class="bento-card experience-section">
                 <h2 class="section-title">My Experience</h2>
                 <div class="experience-list">
-                    <div class="experience-card">
-                        <div class="experience-header">
-                            <div>
-                                <h3 class="company-title">WellDev</h3>
-                                <p class="job-title">Junior Software Engineer</p>
-                            </div>
-                            <span class="job-date">Oct 2024 - Present</span>
+                    <!-- Make cards keyboard-focusable & data-keyed -->
+                    <article class="experience-card" tabindex="0" role="button" aria-label="Open details for WellDev" data-key="welldev">
+                    <div class="experience-header">
+                        <div>
+                        <h3 class="company-title">WellDev</h3>
+                        <p class="job-title">Junior Software Engineer</p>
                         </div>
-                        <p class="experience-description">
-                            Focused on developing scalable backend services for a travel-management platform. Implemented RESTful APIs, optimized database queries, and contributed to the CI/CD pipeline.
-                        </p>
-                        <div class="tech-stack">
-                            <div class="stack-item"><i class="fas fa-code"></i><span>ColdFusion</span></div> 
-                            <div class="stack-item"><i class="fab fa-node-js"></i><span>Node.js</span></div> 
-                            <div class="stack-item"><i class="fab fa-vuejs"></i><span>VueJS</span></div>
-                            <div class="stack-item"><i class="fas fa-database"></i><span>MariaDB</span></div>
-                            <div class="stack-item"><i class="fab fa-docker"></i><span>Docker</span></div>
-                            <div class="stack-item"><i class="fab fa-windows"></i><span>Windows Server</span></div>
-                            <div class="stack-item"><i class="fab fa-git-alt"></i><span>Git</span></div>
-                        </div>
+                        <span class="job-date">Oct 2024 - Present</span>
                     </div>
+                    <p class="experience-description">
+                        Focused on developing scalable backend services for a travel-management platform. Implemented RESTful APIs, optimized database queries, and contributed to the CI/CD pipeline.
+                    </p>
+                    <div class="tech-stack">
+                        <div class="stack-item">
+                            <img src="./assets/coldfusion_logo.png" alt="ColdFusion logo" class="tech-logo">
+                            <span>ColdFusion</span>
+                        </div> 
+                        <div class="stack-item"><i class="fab fa-node-js"></i><span>Node.js</span></div> 
+                        <div class="stack-item"><i class="fab fa-vuejs"></i><span>VueJS</span></div>
+                        <div class="stack-item"><i class="fas fa-database"></i><span>MariaDB</span></div>
+                        <div class="stack-item"><i class="fab fa-docker"></i><span>Docker</span></div>
+                        <div class="stack-item"><i class="fab fa-windows"></i><span>Windows Server</span></div>
+                        <div class="stack-item"><i class="fab fa-git-alt"></i><span>Git</span></div>
+                    </div>
+                    </article>
                     
-                    <div class="experience-card">
-                        <div class="experience-header">
-                            <div>
-                                <h3 class="company-title">Zolo Inc</h3>
-                                <p class="job-title">Software Engineer Intern</p>
-                            </div>
-                            <span class="job-date">March 2024 - April 2024</span>
+                    <article class="experience-card" tabindex="0" role="button" aria-label="Open details for Zolo Inc" data-key="zolo">
+                    <div class="experience-header">
+                        <div>
+                        <h3 class="company-title">Zolo Inc</h3>
+                        <p class="job-title">Software Engineer Intern</p>
                         </div>
-                        <p class="experience-description">
-                            Engineered the frontend for the user authentication system and the primary responsive navigation menu.
-                        </p>
-                        <div class="tech-stack">
-                            <div class="stack-item"><i class="fab fa-react"></i><span>React.js</span></div>
-                            <div class="stack-item"><i class="fas fa-n"></i><span>Next.js</span></div>
-                            <div class="stack-item"><i class="fas fa-water"></i><span>Tailwind CSS</span></div>
-                            <div class="stack-item"><i class="fab fa-git-alt"></i><span>Git</span></div>
-                        </div>
+                        <span class="job-date">March 2024 - April 2024</span>
                     </div>
-                    
+                    <p class="experience-description">
+                        Engineered the frontend for the user authentication system and the primary responsive navigation menu.
+                    </p>
+                    <div class="tech-stack">
+                        <div class="stack-item"><i class="fab fa-react"></i><span>React.js</span></div>
+                        <div class="stack-item"><i class="fa-brands fa-react"></i><span>Next.js</span></div>
+                        <div class="stack-item"><i class="fa-solid fa-droplet"></i><span>Tailwind CSS</span></div>
+                        <div class="stack-item"><i class="fab fa-git-alt"></i><span>Git</span></div>
                     </div>
+                    </article>
+                </div>
             </section>
 
             <!-- Achievements -->
@@ -103,7 +106,7 @@
                 <h2 class="section-title">Skills</h2>
                 <div class="skills-grid">
                     <div class="skill-item">
-                        <i class="fas fa-code"></i>
+                        <img src="./assets/coldfusion_logo.png" alt="ColdFusion logo" class="tech-logo">
                         <div>ColdFusion</div>
                     </div>
                     <div class="skill-item">
@@ -182,6 +185,19 @@
                 </div>
             </section>
         </main>
+    </div>
+    <div class="xp-modal" id="xpModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="xpModalTitle">
+    <div class="xp-modal__backdrop" data-close></div>
+        <div class="xp-modal__dialog" role="document">
+            <button class="xp-modal__close" aria-label="Close details" data-close>
+                <i class="fas fa-times"></i>
+            </button>
+            <header class="xp-modal__header">
+                <h3 id="xpModalTitle" class="xp-modal__title">Experience Details</h3>
+                <p id="xpModalSubtitle" class="xp-modal__subtitle"></p>
+            </header>
+            <ul class="fancy-bullets" id="xpModalList" aria-live="polite"></ul>
+        </div>
     </div>
     <script src="index.js"></script>
 </body>
