@@ -678,8 +678,25 @@ body.loading {
 .experience-card[role="button"] {
     cursor: pointer;
 }
-.experience-card[role="button"]:focus {
+.experience-card[role="button"]:focus-visible {
     outline: 2px solid var(--accent-color);
     outline-offset: 3px;
     box-shadow: var(--shadow-hover);
+}
+
+/* =================================
+    8. CUSTOM ICON SIZING
+   ================================= */
+
+/* Styles for the logo in the "Experience" card's stack */
+.stack-item .tech-logo {
+    height: 1rem; /* Matches the 1rem font-size of the other Font Awesome icons */
+    width: auto; /* Maintain aspect ratio */
+}
+
+/* Styles for the logo in the "Skills" grid */
+.skill-item .tech-logo {
+    height: 2rem;      /* Matches the 2rem font-size of other icons */
+    width: auto;      /* Maintain aspect ratio */
+    margin-bottom: 0.5rem; /* Matches the margin of other icons */
 }
