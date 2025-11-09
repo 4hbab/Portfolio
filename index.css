@@ -212,13 +212,14 @@ body.loading {
 
 /* Experience Section */
 .experience-list {
-    margin-top: 1rem;
+    margin-top: calc(1rem - 10px);
     flex-grow: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    padding-right: 1rem;
+    padding: 10px 1rem 10px 10px; 
 }
 .experience-card {
     background: var(--secondary-bg);
