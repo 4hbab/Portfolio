@@ -103,7 +103,7 @@ export default function Hero() {
     );
 
     // Split subtitle into words for animation
-    const subtitleWords = "Backend focused engineer set on building large scale production ready applications.".split(" ");
+    const subtitleWords = "Backend focused engineer & AI/ML enthusiast building large scale production ready applications.".split(" ");
 
     return (
         <section

@@ -12,15 +12,19 @@ gsap.registerPlugin(useGSAP);
 const SKILLS = [
     "ColdFusion",
     "Node.js",
-    "React",
     "Vue.js",
-    "FastAPI",
-    "Spring Boot",
+    "Quasar",
+    "React",
     "JavaScript",
     "TypeScript",
+    "Python",
     "Docker",
     "MariaDB",
+    "PostgreSQL",
+    "FastAPI",
+    "Tailwind CSS",
     "Git",
+    "Prisma",
     "Next.js",
 ];
 
@@ -82,23 +86,26 @@ export default function About() {
                     <div className="space-y-5">
                         <div data-bio className="overflow-hidden">
                             <p className="text-text-secondary text-base md:text-lg leading-relaxed p-6 border-3 border-border bg-bg-card hard-shadow">
-                                I&apos;m a backend-focused software engineer with a passion for building
-                                large-scale, production-ready applications. I thrive on designing
-                                scalable APIs, optimizing database queries, and shipping reliable services.
+                                I&apos;m a backend-focused software engineer and AI/ML enthusiast
+                                with a CS degree from the Islamic University of Technology. I thrive
+                                on designing scalable APIs, optimizing databases, and shipping
+                                reliable services for complex, production-grade systems.
                             </p>
                         </div>
                         <div data-bio className="overflow-hidden">
                             <p className="text-text-secondary text-base md:text-lg leading-relaxed p-6 border-3 border-border bg-bg-card hard-shadow">
-                                Currently at WellDev, I develop backend services for a
-                                travel-management platform — working with ColdFusion, Node.js,
-                                VueJS, MariaDB, and Docker while contributing to CI/CD pipelines.
+                                Currently a Junior Software Engineer at WellDev, I build and
+                                maintain features within a 20-year-old legacy multi-tenant codebase
+                                for the InnoTix project — working with ColdFusion, Vue.js, Quasar,
+                                Node.js, MariaDB, and Docker across a globally distributed team.
                             </p>
                         </div>
                         <div data-bio className="overflow-hidden">
                             <p className="text-text-secondary text-base md:text-lg leading-relaxed p-6 border-3 border-border bg-accent/30">
-                                I&apos;ve placed in multiple hackathons including 2nd at WellDev
-                                Hackathon x CTF 2025 and 3rd at WellDev x Tessi RAG Hackathon.
-                                I love tackling challenging problems under pressure.
+                                I&apos;ve placed 1st Runners Up at the WellDev Hackathon &amp; CTF
+                                (plus 1st in the CTF competition), and I&apos;m actively
+                                pursuing DevOps and containerization skills through a #100DaysOfDevOps
+                                challenge.
                             </p>
                         </div>
                     </div>

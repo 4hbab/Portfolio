@@ -3,7 +3,7 @@
 import { socials } from "@/content/socials";
 
 export default function Footer() {
-    const marqueeText = " SAKIF AHBAB • BACKEND ENGINEER • BUILDER • ";
+    const marqueeText = " SAKIF AHBAB • BACKEND ENGINEER • AI/ML ENTHUSIAST • BUILDER • ";
     const repeated = marqueeText.repeat(6);
 
     return (
