@@ -97,13 +97,7 @@ export default function Hero() {
                 yoyo: true,
             });
 
-            // Scroll indicator bounces
-            tl.from("[data-scroll-indicator]", {
-                opacity: 0,
-                y: -20,
-                duration: 0.4,
-                ease: ease.out,
-            }, "-=0.2");
+
         },
         { scope: rootRef, dependencies: [reducedMotion] }
     );
@@ -220,12 +214,6 @@ export default function Hero() {
                     </div>
                 </div>
 
-                {/* Scroll indicator */}
-                <div data-scroll-indicator className="absolute bottom-8 left-1/2 -translate-x-1/2">
-                    <div className="w-8 h-12 border-3 border-border flex items-start justify-center p-2">
-                        <div className="w-2 h-2 bg-text-primary animate-bounce" />
-                    </div>
-                </div>
             </div>
         </section>
     );
