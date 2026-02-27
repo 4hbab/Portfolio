@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
-import { useReducedMotion } from "@/lib/animation/reducedMotion";
 import { ease } from "@/lib/animation/presets";
+import { useReducedMotion } from "@/lib/animation/reducedMotion";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 gsap.registerPlugin(useGSAP);
 
@@ -123,7 +123,7 @@ export default function Navbar() {
                     ))}
                     <li className="ml-2">
                         <a
-                            href="/resume.pdf"
+                            href="https://drive.google.com/file/d/1GsrBek0_zv7JAkJEyjKHaur-dAF0s0HJ/view?usp=sharing"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="block text-sm font-bold uppercase tracking-wider px-5 py-2 bg-accent text-text-primary border-3 border-border hard-shadow hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[6px_6px_0_var(--color-border)] transition-all duration-200"
