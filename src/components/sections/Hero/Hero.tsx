@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import Button from "@/components/ui/Button/Button";
 import { useReducedMotion } from "@/lib/animation/reducedMotion";
+import { useMagneticCursor } from "@/lib/animation/useMagneticCursor";
 import { ease } from "@/lib/animation/presets";
 
 gsap.registerPlugin(useGSAP);
@@ -17,6 +18,7 @@ const NAME_CHARS = "Sakif Ahbab".split("").map((char, i) => ({
 export default function Hero() {
     const rootRef = useRef<HTMLElement>(null);
     const reducedMotion = useReducedMotion();
+    useMagneticCursor(rootRef, { strength: 35, radius: 180 });
 
     useGSAP(
         () => {
@@ -159,7 +161,8 @@ export default function Hero() {
                             <span
                                 key={key}
                                 data-char
-                                className="inline-block"
+                                data-magnetic
+                                className="inline-block cursor-default"
                                 style={{ willChange: "transform, opacity, clip-path" }}
                             >
                                 {char}
