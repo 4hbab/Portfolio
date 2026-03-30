@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans, Bebas_Neue } from "next/font/google";
 import { siteMetadata } from "@/lib/seo/metadata";
+import Chatbot from "@/components/ui/Chatbot/Chatbot";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -30,7 +31,9 @@ export default function RootLayout({
                     Skip to content
                 </a>
                 {children}
+                <Chatbot />
             </body>
         </html>
     );
 }
+
