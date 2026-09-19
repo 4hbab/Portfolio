@@ -7,15 +7,12 @@ import Button from "@/components/ui/Button/Button";
 import { useReducedMotion } from "@/lib/animation/reducedMotion";
 import { useMagneticCursor } from "@/lib/animation/useMagneticCursor";
 import { ease } from "@/lib/animation/presets";
+import { usePortfolio } from "@/components/PortfolioProvider";
 
 gsap.registerPlugin(useGSAP);
 
-const NAME_CHARS = "Sakif Ahbab".split("").map((char, i) => ({
-    char: char === " " ? "\u00A0" : char,
-    key: `${char}-${i}`,
-}));
-
 export default function Hero() {
+    const { content } = usePortfolio();
     const rootRef = useRef<HTMLElement>(null);
     const reducedMotion = useReducedMotion();
     useMagneticCursor(rootRef, { strength: 35, radius: 180 });
@@ -105,7 +102,11 @@ export default function Hero() {
     );
 
     // Split subtitle into words for animation
-    const subtitleWords = "Backend focused engineer & AI/ML enthusiast building large scale production ready applications.".split(" ");
+    const nameChars = content.profile.name.split("").map((char, i) => ({
+        char: char === " " ? "\u00A0" : char,
+        key: `${char}-${i}`,
+    }));
+    const subtitleWords = content.profile.tagline.split(" ");
 
     return (
         <section
@@ -147,7 +148,7 @@ export default function Hero() {
                 <div data-badge className="mb-8 inline-block">
                     <span className="inline-flex items-center gap-3 px-5 py-2.5 border-3 border-border bg-bg hard-shadow font-bold text-xs uppercase tracking-[0.2em] text-text-primary">
                         <span className="w-3 h-3 bg-accent-green border-2 border-border bounce-soft" />
-                        Available for work
+                        {content.profile.availability}
                     </span>
                 </div>
 
@@ -157,7 +158,7 @@ export default function Hero() {
                         Hi, I&apos;m
                     </p>
                     <h1 className="font-display text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] xl:text-[12rem] font-black leading-[0.85] tracking-tighter text-text-primary">
-                        {NAME_CHARS.map(({ char, key }) => (
+                        {nameChars.map(({ char, key }) => (
                             <span
                                 key={key}
                                 data-char

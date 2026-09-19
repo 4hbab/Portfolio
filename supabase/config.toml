@@ -1,0 +1,14 @@
+project_id = "portfolio"
+
+[auth]
+enable_signup = false
+
+[functions.recruiter-chat]
+verify_jwt = false
+
+[functions.trigger-rebuild]
+verify_jwt = true
+
+[functions.import-github-projects]
+verify_jwt = true
+

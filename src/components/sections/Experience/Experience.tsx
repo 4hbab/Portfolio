@@ -5,13 +5,14 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import SectionHeading from "@/components/ui/SectionHeading/SectionHeading";
-import { experiences } from "@/content/experience";
+import { usePortfolio } from "@/components/PortfolioProvider";
 import { useReducedMotion } from "@/lib/animation/reducedMotion";
 import { ease, duration } from "@/lib/animation/presets";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 export default function Experience() {
+    const { content } = usePortfolio();
     const rootRef = useRef<HTMLElement>(null);
     const lineRef = useRef<HTMLDivElement>(null);
     const reducedMotion = useReducedMotion();
@@ -90,7 +91,7 @@ export default function Experience() {
                     />
 
                     <div className="space-y-10">
-                        {experiences.map((exp, i) => (
+                        {content.experience.map((exp) => (
                             <div key={exp.id} data-exp-card className="relative pl-10 md:pl-24">
                                 {/* Timeline dot — square brutalist */}
                                 <div

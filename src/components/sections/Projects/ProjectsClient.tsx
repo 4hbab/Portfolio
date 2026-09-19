@@ -4,14 +4,14 @@ import { useRef, useState, useCallback } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import type { Project } from "@/content/projects";
+import type { PortfolioProject } from "@/content/portfolio";
 import { useReducedMotion } from "@/lib/animation/reducedMotion";
 import { duration, ease } from "@/lib/animation/presets";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 interface ProjectsClientProps {
-    projects: Project[];
+    projects: PortfolioProject[];
     allTags: string[];
 }
 
@@ -23,7 +23,6 @@ export default function ProjectsClient({
     const gridRef = useRef<HTMLDivElement>(null);
     const reducedMotion = useReducedMotion();
     const [activeFilter, setActiveFilter] = useState("All");
-    const [expandedId, setExpandedId] = useState<string | null>(null);
 
     const filteredProjects =
         activeFilter === "All"
@@ -33,7 +32,6 @@ export default function ProjectsClient({
     const handleFilter = useCallback(
         (tag: string) => {
             setActiveFilter(tag);
-            setExpandedId(null);
 
             // Animate cards on filter change
             if (!reducedMotion && gridRef.current) {
@@ -55,10 +53,6 @@ export default function ProjectsClient({
         },
         [reducedMotion]
     );
-
-    const toggleExpand = useCallback((id: string) => {
-        setExpandedId((prev) => (prev === id ? null : id));
-    }, []);
 
     // Scroll-triggered initial reveal
     useGSAP(
@@ -128,12 +122,7 @@ export default function ProjectsClient({
             {/* Project Cards Grid */}
             <div ref={gridRef} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredProjects.map((project) => (
-                    <ProjectCard
-                        key={project.id}
-                        project={project}
-                        isExpanded={expandedId === project.id}
-                        onToggle={() => toggleExpand(project.id)}
-                    />
+                    <ProjectCard key={project.id} project={project} />
                 ))}
             </div>
 
@@ -149,17 +138,14 @@ export default function ProjectsClient({
 /* ── Project Card ── */
 
 interface ProjectCardProps {
-    project: Project;
-    isExpanded: boolean;
-    onToggle: () => void;
+    project: PortfolioProject;
 }
 
-function ProjectCard({ project, isExpanded, onToggle }: ProjectCardProps) {
+function ProjectCard({ project }: ProjectCardProps) {
     return (
         <div
             data-card
-            className={`group border-3 border-border bg-bg-card overflow-hidden hard-shadow-lg transition-all duration-200 hover:-translate-y-2 hover:-translate-x-1 hover:shadow-[10px_10px_0_var(--color-border)] ${isExpanded ? "sm:col-span-2 lg:col-span-3" : ""
-                }`}
+            className="group border-3 border-border bg-bg-card overflow-hidden hard-shadow-lg transition-all duration-200 hover:-translate-y-2 hover:-translate-x-1 hover:shadow-[10px_10px_0_var(--color-border)]"
         >
             {/* Card Header — solid accent color */}
             <div className="h-44 relative overflow-hidden bg-accent-blue/15 border-b-3 border-border">

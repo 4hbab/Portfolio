@@ -1,272 +1,86 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { streamChat, type ChatMessage } from "@/lib/chatbot";
-import {
-    personalKnowledge,
-    serialiseKnowledge,
-} from "@/content/chatbot-knowledge";
+import { streamChat, type ChatMessage, type ChatSource } from "@/lib/chatbot";
+import { usePortfolio } from "@/components/PortfolioProvider";
 
-// ──────────────────────────────────────────────
-// Constants
-// ──────────────────────────────────────────────
-
-const KNOWLEDGE_CONTEXT = serialiseKnowledge(personalKnowledge);
-
-const SUGGESTED_QUESTIONS = [
-    "What does Sakif do?",
-    "What's his tech stack?",
-    "Tell me about his experience",
-    "How can I contact him?",
-];
-
-// ──────────────────────────────────────────────
-// Component
-// ──────────────────────────────────────────────
+const DEFAULT_QUESTIONS = ["What does Sakif do?", "Which projects show backend experience?", "Summarize his recent experience", "How can I contact him?"];
 
 export default function Chatbot() {
+    const { content, revision, refresh } = usePortfolio();
+    const suggestions = content.faqs.slice(0, 4).map((faq) => faq.question);
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
+    const [sources, setSources] = useState<ChatSource[]>([]);
+    const controllerRef = useRef<AbortController | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+    const lastQuestionRef = useRef("");
 
-    // Auto-scroll to bottom
-    const scrollToBottom = useCallback(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, []);
+    useEffect(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
+    useEffect(() => { if (isOpen) setTimeout(() => inputRef.current?.focus(), 200); }, [isOpen]);
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages, scrollToBottom]);
-
-    // Focus input when opened
-    useEffect(() => {
-        if (isOpen) {
-            setTimeout(() => inputRef.current?.focus(), 350);
-        }
-    }, [isOpen]);
-
-    // ──────────────────────────────────────────
-    // Chat logic
-    // ──────────────────────────────────────────
-
-    const sendMessage = useCallback(
-        async (text: string) => {
-            if (!text.trim() || isLoading) return;
-
-            setError(null);
-            const userMessage: ChatMessage = { role: "user", content: text.trim() };
-            const updatedMessages = [...messages, userMessage];
-            setMessages(updatedMessages);
-            setInput("");
-            setIsLoading(true);
-
-            // Add placeholder for assistant response
-            const assistantMessage: ChatMessage = {
-                role: "assistant",
-                content: "",
-            };
-            setMessages([...updatedMessages, assistantMessage]);
-
-            try {
-                await streamChat(
-                    updatedMessages,
-                    KNOWLEDGE_CONTEXT,
-                    (chunk: string) => {
-                        assistantMessage.content += chunk;
-                        setMessages((prev) => {
-                            const next = [...prev];
-                            next[next.length - 1] = { ...assistantMessage };
-                            return next;
-                        });
-                    }
-                );
-            } catch (err) {
-                const errorMsg =
-                    err instanceof Error ? err.message : "Something went wrong.";
-                setError(errorMsg);
-                // Remove the empty assistant message on error
-                setMessages(updatedMessages);
-            } finally {
+    const sendMessage = useCallback(async (rawText: string, retryAfterRefresh = true) => {
+        const text = rawText.trim();
+        if (!text || isLoading || text.length > 4000) return;
+        lastQuestionRef.current = text;
+        setError(null);
+        setSources([]);
+        const history = [...messages, { role: "user" as const, content: text }].slice(-10);
+        setMessages([...history, { role: "assistant", content: "" }]);
+        setInput("");
+        setIsLoading(true);
+        const controller = new AbortController();
+        controllerRef.current = controller;
+        let answer = "";
+        try {
+            const result = await streamChat(history, revision, (chunk) => {
+                answer += chunk;
+                setMessages([...history, { role: "assistant", content: answer }]);
+            }, controller.signal);
+            setSources(result.sources);
+            if (result.stale && retryAfterRefresh) {
+                await refresh();
+                setMessages(messages);
                 setIsLoading(false);
+                await sendMessage(text, false);
+                return;
             }
-        },
-        [messages, isLoading]
-    );
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        sendMessage(input);
-    };
-
-    const handleSuggestionClick = (question: string) => {
-        sendMessage(question);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage(input);
+        } catch (caught) {
+            if ((caught as Error).name === "AbortError") { if (!answer) setMessages(history); }
+            else { setMessages(history); setError(caught instanceof Error ? caught.message : "The assistant is unavailable."); }
+        } finally {
+            controllerRef.current = null;
+            setIsLoading(false);
         }
-    };
+    }, [isLoading, messages, refresh, revision]);
 
-    // ──────────────────────────────────────────
-    // Render
-    // ──────────────────────────────────────────
+    const reset = () => { controllerRef.current?.abort(); setMessages([]); setSources([]); setError(null); setInput(""); };
 
-    return (
-        <>
-            {/* ── FAB (Floating Action Button) ── */}
-            <button
-                id="chatbot-fab"
-                onClick={() => setIsOpen((prev) => !prev)}
-                className="chatbot-fab"
-                aria-label={isOpen ? "Close chatbot" : "Open chatbot"}
-                aria-expanded={isOpen}
-            >
-                <span
-                    className="chatbot-fab-icon"
-                    style={{
-                        transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
-                    }}
-                >
-                    {isOpen ? (
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                            <line x1="6" y1="18" x2="18" y2="6" />
-                        </svg>
-                    ) : (
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z" />
-                            <circle cx="8" cy="10" r="1.2" />
-                            <circle cx="12" cy="10" r="1.2" />
-                            <circle cx="16" cy="10" r="1.2" />
-                        </svg>
-                    )}
-                </span>
-            </button>
-
-            {/* ── Chat Panel ── */}
-            {isOpen && (
-                <div
-                    className="chatbot-panel chatbot-panel--open"
-                    role="dialog"
-                    aria-label="Chat with Sakif's AI assistant"
-                >
-                    {/* Header */}
-                    <div className="chatbot-header">
-                        <div className="chatbot-header-info">
-                            <div className="chatbot-avatar">
-                                <span>SA</span>
-                            </div>
-                            <div>
-                                <h3 className="chatbot-header-title">
-                                    Ask Me Anything
-                                </h3>
-                                <p className="chatbot-header-subtitle">
-                                    AI-powered • About Sakif
-                                </p>
-                            </div>
-                        </div>
-                        <div className="chatbot-header-dot" />
-                    </div>
-
-                    {/* Messages */}
-                    <div className="chatbot-messages">
-                        {messages.length === 0 && (
-                            <div className="chatbot-welcome">
-                                <p className="chatbot-welcome-text">
-                                    Hey! 👋 I know everything about Sakif. Ask me
-                                    anything about his experience, skills, or
-                                    projects!
-                                </p>
-                                <div className="chatbot-suggestions">
-                                    {SUGGESTED_QUESTIONS.map((q) => (
-                                        <button
-                                            key={q}
-                                            onClick={() =>
-                                                handleSuggestionClick(q)
-                                            }
-                                            className="chatbot-suggestion-btn"
-                                        >
-                                            {q}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {messages.map((msg, i) => (
-                            <div
-                                key={i}
-                                className={`chatbot-message chatbot-message--${msg.role}`}
-                            >
-                                {msg.role === "assistant" && (
-                                    <div className="chatbot-message-avatar">
-                                        SA
-                                    </div>
-                                )}
-                                <div
-                                    className={`chatbot-message-bubble chatbot-message-bubble--${msg.role}`}
-                                >
-                                    {msg.content || (
-                                        <span className="chatbot-typing">
-                                            <span />
-                                            <span />
-                                            <span />
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-
-                        {error && (
-                            <div className="chatbot-error">
-                                <span>⚠</span> {error}
-                            </div>
-                        )}
-
-                        <div ref={messagesEndRef} />
-                    </div>
-
-                    {/* Input */}
-                    <form onSubmit={handleSubmit} className="chatbot-input-area">
-                        <input
-                            ref={inputRef}
-                            id="chatbot-input"
-                            type="text"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder={
-                                isLoading ? "Thinking..." : "Type a message..."
-                            }
-                            disabled={isLoading}
-                            className="chatbot-input"
-                            autoComplete="off"
-                        />
-                        <button
-                            type="submit"
-                            disabled={isLoading || !input.trim()}
-                            className="chatbot-send-btn"
-                            aria-label="Send message"
-                        >
-                            <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                            >
-                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                            </svg>
-                        </button>
-                    </form>
-                </div>
-            )}
-        </>
-    );
+    return <>
+        <button id="chatbot-fab" onClick={() => setIsOpen((open) => !open)} className="chatbot-fab" aria-label={isOpen ? "Close recruiter assistant" : "Open recruiter assistant"} aria-expanded={isOpen}>
+            <span className="chatbot-fab-icon">{isOpen ? "×" : "AI"}</span>
+        </button>
+        {isOpen && <div className="chatbot-panel chatbot-panel--open" role="dialog" aria-label="Sakif's recruiter assistant">
+            <div className="chatbot-header">
+                <div className="chatbot-header-info"><div className="chatbot-avatar">SA</div><div><h3 className="chatbot-header-title">Recruiter Assistant</h3><p className="chatbot-header-subtitle">Grounded in the published portfolio</p></div></div>
+                <button type="button" onClick={reset} className="chatbot-reset-btn" aria-label="Reset conversation">Reset</button>
+            </div>
+            <div className="chatbot-messages" aria-live="polite">
+                {messages.length === 0 && <div className="chatbot-welcome"><p className="chatbot-welcome-text">Ask about Sakif&apos;s experience and projects, or paste a job description for an evidence-based comparison.</p><div className="chatbot-suggestions">{(suggestions.length ? suggestions : DEFAULT_QUESTIONS).map((question) => <button key={question} onClick={() => void sendMessage(question)} className="chatbot-suggestion-btn">{question}</button>)}</div></div>}
+                {messages.map((message, index) => <div key={`${message.role}-${index}`} className={`chatbot-message chatbot-message--${message.role}`}>{message.role === "assistant" && <div className="chatbot-message-avatar">SA</div>}<div className={`chatbot-message-bubble chatbot-message-bubble--${message.role}`}>{message.content || <span className="chatbot-typing"><span /><span /><span /></span>}</div></div>)}
+                {sources.length > 0 && <div className="chatbot-sources">{sources.map((source) => <a key={source.id} href={source.href} className="chatbot-source-link">{source.label}</a>)}</div>}
+                {error && <div className="chatbot-error"><span>⚠</span> {error}<div className="chatbot-fallback-links"><a href="#experience">Experience</a><a href="#projects">Projects</a><a href="#contact">Contact</a></div>{lastQuestionRef.current && <button onClick={() => void sendMessage(lastQuestionRef.current)} className="chatbot-retry-btn">Retry</button>}</div>}
+                <div ref={messagesEndRef} />
+            </div>
+            <form onSubmit={(event) => { event.preventDefault(); void sendMessage(input); }} className="chatbot-input-area">
+                <textarea ref={inputRef} id="chatbot-input" value={input} maxLength={4000} rows={2} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void sendMessage(input); } }} placeholder="Ask a question or paste a job description…" disabled={isLoading} className="chatbot-input" />
+                {isLoading ? <button type="button" onClick={() => controllerRef.current?.abort()} className="chatbot-send-btn" aria-label="Stop response">■</button> : <button type="submit" disabled={!input.trim()} className="chatbot-send-btn" aria-label="Send message">➤</button>}
+            </form>
+            <p className="chatbot-privacy">Messages are sent to Google Gemini. Don&apos;t include confidential information.</p>
+        </div>}
+    </>;
 }

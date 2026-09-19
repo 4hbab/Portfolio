@@ -590,6 +590,51 @@ button {
   outline: none;
   background: transparent;
   color: var(--color-text-primary);
+  resize: none;
+}
+
+.chatbot-reset-btn,
+.chatbot-retry-btn,
+.chatbot-source-link,
+.chatbot-fallback-links a {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-decoration: underline;
+}
+
+.chatbot-reset-btn { color: var(--color-text-inverse); }
+.chatbot-sources, .chatbot-fallback-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.chatbot-source-link, .chatbot-fallback-links a { color: var(--color-text-primary); border: 2px solid var(--color-border); padding: 0.25rem 0.5rem; background: var(--color-accent); text-decoration: none; }
+.chatbot-retry-btn { display: block; margin-top: 0.5rem; }
+.chatbot-privacy { padding: 0.4rem 0.75rem; background: var(--color-bg-card); color: var(--color-text-muted); font-size: 0.625rem; border-top: 1px solid var(--color-border); }
+
+/* Admin */
+.admin-field { display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+.admin-field input, .admin-field textarea, .admin-field select { width: 100%; border: 2px solid var(--color-border); background: var(--color-bg); color: var(--color-text-primary); padding: 0.7rem; font: 500 0.9rem/1.4 var(--font-sans); text-transform: none; letter-spacing: normal; outline: none; }
+.admin-field input:focus, .admin-field textarea:focus { box-shadow: 3px 3px 0 var(--color-accent); }
+.admin-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.admin-primary, .admin-secondary, .admin-nav, .admin-icon { border: 2px solid var(--color-border); padding: 0.6rem 0.85rem; font-size: 0.72rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
+.admin-primary { background: var(--color-accent); box-shadow: 3px 3px 0 var(--color-border); }
+.admin-secondary { background: var(--color-bg-card); }
+.admin-primary:disabled, .admin-secondary:disabled, .admin-icon:disabled { opacity: 0.45; cursor: not-allowed; }
+.admin-link { font-size: 0.72rem; font-weight: 800; text-decoration: underline; }
+.admin-nav { width: 100%; text-align: left; background: var(--color-bg-card); }
+.admin-nav-active { background: var(--color-text-primary); color: var(--color-bg); }
+.admin-item { border: 2px solid var(--color-border); padding: 1rem; background: var(--color-bg); }
+.admin-icon { padding: 0.25rem 0.55rem; background: var(--color-bg-card); }
+.admin-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
+.admin-check input { width: 1rem; height: 1rem; accent-color: var(--color-accent-pink); }
+.admin-error, .admin-success { border: 2px solid currentColor; padding: 0.75rem; margin-bottom: 1rem; font-weight: 700; font-size: 0.85rem; }
+.admin-error { color: #b42318; background: #fee4e2; }
+.admin-success { color: #067647; background: #dcfae6; }
+.admin-modal { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 1rem; background: rgb(0 0 0 / 0.72); }
+.admin-modal-card { width: min(960px, 100%); max-height: 90vh; overflow: auto; border: 3px solid var(--color-border); background: var(--color-bg-card); box-shadow: 8px 8px 0 var(--color-accent); padding: 1rem; }
+.admin-modal-close { display: block; margin-left: auto; margin-bottom: 0.75rem; font-weight: 900; text-transform: uppercase; }
+
+@media (max-width: 640px) {
+  .admin-grid { grid-template-columns: 1fr; }
 }
 
 .chatbot-input::placeholder {

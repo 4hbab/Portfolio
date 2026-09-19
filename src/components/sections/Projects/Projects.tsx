@@ -1,10 +1,12 @@
+"use client";
+
 import SectionHeading from "@/components/ui/SectionHeading/SectionHeading";
-import { fetchProjects, getProjectTags } from "@/content/projects";
+import { usePortfolio } from "@/components/PortfolioProvider";
 import ProjectsClient from "./ProjectsClient";
 
-export default async function Projects() {
-    const projects = await fetchProjects();
-    const allTags = getProjectTags(projects);
+export default function Projects() {
+    const { content } = usePortfolio();
+    const allTags = Array.from(new Set(content.projects.flatMap((project) => project.tags))).sort();
 
     return (
         <section id="projects" className="section bg-bg stripe-bg">
@@ -15,7 +17,7 @@ export default async function Projects() {
                     accent="var(--color-accent-blue)"
                 />
 
-                <ProjectsClient projects={projects} allTags={allTags} />
+                <ProjectsClient projects={content.projects} allTags={allTags} />
             </div>
         </section>
     );
