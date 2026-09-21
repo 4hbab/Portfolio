@@ -5,13 +5,14 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import Button from "@/components/ui/Button/Button";
-import { socials } from "@/content/socials";
+import { usePortfolio } from "@/components/PortfolioProvider";
 import { useReducedMotion } from "@/lib/animation/reducedMotion";
-import { ease, duration } from "@/lib/animation/presets";
+import { ease } from "@/lib/animation/presets";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 export default function Contact() {
+    const { content } = usePortfolio();
     const rootRef = useRef<HTMLElement>(null);
     const reducedMotion = useReducedMotion();
 
@@ -145,7 +146,7 @@ export default function Contact() {
                     </p>
 
                     <Button
-                        href="mailto:hello@example.com"
+                        href={`mailto:${content.profile.email}`}
                         className="bg-accent-pink text-text-inverse border-text-inverse/30 hover:bg-accent hover:text-text-primary"
                     >
                         <svg
@@ -167,24 +168,17 @@ export default function Contact() {
 
                 {/* Social Links */}
                 <div className="flex items-center justify-center gap-4">
-                    {socials.map((s) => (
+                    {content.links.map((link) => (
                         <a
                             data-social
-                            key={s.platform}
-                            href={s.url}
+                            key={link.id}
+                            href={link.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="group w-12 h-12 flex items-center justify-center border-3 border-text-inverse/30 text-text-inverse hover:bg-accent hover:text-text-primary hover:border-accent transition-all duration-200 hover:-translate-y-1 hover:rotate-[-6deg]"
-                            aria-label={s.platform}
+                            aria-label={link.label}
                         >
-                            <svg
-                                className="w-5 h-5"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                                aria-hidden="true"
-                            >
-                                <path d={s.icon} />
-                            </svg>
+                            <span className="font-black text-sm" aria-hidden="true">{link.label.slice(0, 2).toUpperCase()}</span>
                         </a>
                     ))}
                 </div>

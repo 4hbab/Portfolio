@@ -6,29 +6,13 @@ import { useReducedMotion } from "@/lib/animation/reducedMotion";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { useEffect, useRef, useState } from "react";
+import { usePortfolio } from "@/components/PortfolioProvider";
 
 gsap.registerPlugin(useGSAP);
 
-const SKILLS = [
-    "ColdFusion",
-    "Node.js",
-    "Vue.js",
-    "Quasar",
-    "React",
-    "JavaScript",
-    "TypeScript",
-    "Python",
-    "Docker",
-    "MariaDB",
-    "PostgreSQL",
-    "FastAPI",
-    "Tailwind CSS",
-    "Git",
-    "Prisma",
-    "Next.js",
-];
-
 export default function About() {
+    const { content } = usePortfolio();
+    const skills = content.skillGroups.flatMap((group) => group.skills);
     const rootRef = useRef<HTMLElement>(null);
     const reducedMotion = useReducedMotion();
     const [revealed, setRevealed] = useState(false);
@@ -195,44 +179,15 @@ export default function About() {
                             style={{ width: "0%" }}
                         />
 
-                        {/* Bio Card 1 */}
-                        <div data-bio className="overflow-hidden perspective">
-                            <div className="group relative p-6 border-3 border-border bg-bg-card hard-shadow hover:border-accent-pink transition-colors duration-300">
-                                <div className="absolute -inset-0.5 bg-gradient-to-br from-accent-pink/0 via-transparent to-accent/0 opacity-0 group-hover:opacity-20 transition-opacity duration-300 -z-10 blur-sm" />
-                                <p className="text-text-secondary text-base md:text-lg leading-relaxed font-medium">
-                                    I&apos;m a backend-focused software engineer and AI/ML enthusiast
-                                    with a CS degree from the Islamic University of Technology. I thrive
-                                    on designing scalable APIs, optimizing databases, and shipping
-                                    reliable services for complex, production-grade systems.
-                                </p>
+                        {content.bio.map((entry) => (
+                            <div key={entry.id} data-bio className="overflow-hidden perspective">
+                                <div className={`group relative p-6 border-3 border-border hard-shadow hover:border-accent-pink transition-colors duration-300 ${entry.highlighted ? "bg-accent/30" : "bg-bg-card"}`}>
+                                    <p className="text-text-secondary text-base md:text-lg leading-relaxed font-medium">
+                                        {entry.text}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-
-                        {/* Bio Card 2 */}
-                        <div data-bio className="overflow-hidden perspective">
-                            <div className="group relative p-6 border-3 border-border bg-bg-card hard-shadow hover:border-accent-pink transition-colors duration-300">
-                                <div className="absolute -inset-0.5 bg-gradient-to-br from-accent-pink/0 via-transparent to-accent/0 opacity-0 group-hover:opacity-20 transition-opacity duration-300 -z-10 blur-sm" />
-                                <p className="text-text-secondary text-base md:text-lg leading-relaxed font-medium">
-                                    Currently a Junior Software Engineer at WellDev, I build and
-                                    maintain features within a 20-year-old legacy multi-tenant codebase
-                                    for the InnoTix project — working with ColdFusion, Vue.js, Quasar,
-                                    Node.js, MariaDB, and Docker across a globally distributed team.
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Bio Card 3 */}
-                        <div data-bio className="overflow-hidden perspective">
-                            <div className="group relative p-6 border-3 border-border bg-accent/30 hard-shadow hover:border-accent-pink hover:bg-accent/40 transition-all duration-300">
-                                <div className="absolute -inset-0.5 bg-gradient-to-br from-accent-pink/20 via-transparent to-accent/10 opacity-0 group-hover:opacity-40 transition-opacity duration-300 -z-10 blur-sm" />
-                                <p className="text-text-secondary text-base md:text-lg leading-relaxed font-medium">
-                                    I&apos;ve placed 1st Runners Up at the WellDev Hackathon &amp; CTF
-                                    (plus 1st in the CTF competition), and I&apos;m actively
-                                    pursuing DevOps and containerization skills through a #100DaysOfDevOps
-                                    challenge.
-                                </p>
-                            </div>
-                        </div>
+                        ))}
                     </div>
 
                     {/* Skills Section */}
@@ -247,7 +202,7 @@ export default function About() {
 
                         {/* Skills Grid */}
                         <div className="grid grid-cols-2 gap-4 md:gap-5">
-                            {SKILLS.map((skill, i) => (
+                            {skills.map((skill, i) => (
                                 <div
                                     key={skill}
                                     data-skill

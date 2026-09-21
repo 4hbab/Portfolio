@@ -5,6 +5,7 @@ import { useReducedMotion } from "@/lib/animation/reducedMotion";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { useCallback, useEffect, useRef, useState } from "react";
+import ResumeDownloadButton from "@/components/resume/ResumeDownloadButton";
 
 gsap.registerPlugin(useGSAP);
 
@@ -122,14 +123,7 @@ export default function Navbar() {
                         </li>
                     ))}
                     <li className="ml-2">
-                        <a
-                            href="https://drive.google.com/file/d/1GsrBek0_zv7JAkJEyjKHaur-dAF0s0HJ/view?usp=sharing"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block text-sm font-bold uppercase tracking-wider px-5 py-2 bg-accent text-text-primary border-3 border-border hard-shadow hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[6px_6px_0_var(--color-border)] transition-all duration-200"
-                        >
-                            Resume
-                        </a>
+                        <ResumeDownloadButton />
                     </li>
                 </ul>
 
@@ -178,15 +172,7 @@ export default function Navbar() {
                         </li>
                     ))}
                     <li>
-                        <a
-                            data-mobile-link
-                            href="/resume.pdf"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block text-lg font-bold uppercase tracking-wider px-4 py-3 bg-accent text-text-primary border-3 border-border hard-shadow"
-                        >
-                            Resume
-                        </a>
+                        <ResumeDownloadButton mobile />
                     </li>
                 </ul>
             </div>

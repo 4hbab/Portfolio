@@ -15,8 +15,36 @@ build/
 
 # Misc
 .DS_Store
+
+# Local environment and secret files
+.env
+.env.*
+*.env
+*.env.*
+.envrc
+.direnv/
+!.env.example
+!.env.*.example
+!*.env.example
+!*.env.*.example
+
+# Supabase CLI state and locally generated runtime secrets
+supabase/.temp/
+supabase/.branches/
+
+# Credentials and private keys
+.secrets/
+secrets/
+credentials.json
+client_secret*.json
+*service-account*.json
+*.token
 *.pem
-.env*.local
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
 
 # Debug
 npm-debug.log*
