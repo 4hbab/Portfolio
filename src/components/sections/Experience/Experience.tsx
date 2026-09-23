@@ -80,14 +80,14 @@ export default function Experience() {
                 <SectionHeading
                     title="Experience"
                     subtitle="Where I've worked and what I've built."
-                    accent="var(--color-accent-pink)"
+                    accent="var(--color-surface)"
                 />
 
                 <div className="relative">
                     {/* Timeline line — draws on scroll */}
                     <div
                         ref={lineRef}
-                        className="absolute left-0 md:left-10 top-0 bottom-0 w-1 bg-border origin-top"
+                        className="absolute left-0 md:left-10 top-0 bottom-0 w-px bg-border origin-top"
                     />
 
                     <div className="space-y-10">
@@ -96,21 +96,20 @@ export default function Experience() {
                                 {/* Timeline dot — square brutalist */}
                                 <div
                                     data-exp-dot
-                                    className="absolute left-0 md:left-10 top-4 w-5 h-5 -translate-x-[10px] border-3 border-border bg-accent rotate-45"
+                                    className="absolute left-0 md:left-10 top-5 w-2 h-2 -translate-x-[3.5px] rounded-full bg-accent"
                                 />
 
-                                <div className="border-3 border-border bg-bg-card p-6 md:p-8 hard-shadow-lg hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[8px_8px_0_var(--color-border)] transition-all duration-200">
-                                    {/* Period as a rotated badge */}
-                                    <span className="inline-block text-xs font-bold uppercase tracking-widest px-3 py-1 border-2 border-border bg-accent mb-4 rotate-[-1deg]">
+                                <div className="border border-border bg-bg-card p-6 md:p-8 hard-shadow-lg transition-all duration-200">
+                                                                        <span className="inline-block font-mono text-xs text-text-muted mb-4">
                                         {exp.period}
                                     </span>
 
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                                        <h3 className="font-display text-xl md:text-2xl font-black text-text-primary uppercase tracking-tight">
+                                        <h3 className="font-display text-lg md:text-xl font-semibold text-text-primary tracking-tight">
                                             {exp.role}
                                         </h3>
                                     </div>
-                                    <p className="text-accent-pink font-bold text-sm uppercase tracking-wider mb-4">
+                                    <p className="text-text-secondary text-sm mb-4">
                                         {exp.company}
                                     </p>
                                     <p className="text-text-secondary text-base leading-relaxed mb-4">
@@ -120,7 +119,7 @@ export default function Experience() {
                                         {exp.tags.map((tag) => (
                                             <span
                                                 key={tag}
-                                                className="px-3 py-1 border-2 border-border bg-bg text-text-primary text-xs font-bold uppercase tracking-wider"
+                                                className="px-2.5 py-1 rounded-md bg-surface text-text-secondary font-mono text-xs"
                                             >
                                                 {tag}
                                             </span>

@@ -1,29 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 
-/**
- * Returns true if the user prefers reduced motion.
- */
+const QUERY = "(prefers-reduced-motion: reduce)";
+
+/** For non-React call sites (GSAP helpers) that just need the current value. */
 export function prefersReducedMotion(): boolean {
     if (typeof window === "undefined") return false;
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return window.matchMedia(QUERY).matches;
+}
+
+function subscribe(onChange: () => void) {
+    const query = window.matchMedia(QUERY);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
 }
 
 /**
- * React hook that tracks the prefers-reduced-motion media query.
+ * Subscribing through useSyncExternalStore rather than useState + useEffect.
+ * The server and the hydrating client both report false so the markup matches,
+ * and the real preference lands on the first commit — without the setState
+ * during an effect that the project was globally disabling a lint rule for.
  */
 export function useReducedMotion(): boolean {
-    const [reduced, setReduced] = useState(false);
-
-    useEffect(() => {
-        const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-        setReduced(mq.matches);
-
-        const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
-        mq.addEventListener("change", handler);
-        return () => mq.removeEventListener("change", handler);
-    }, []);
-
-    return reduced;
+    return useSyncExternalStore(subscribe, prefersReducedMotion, () => false);
 }

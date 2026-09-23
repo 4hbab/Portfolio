@@ -1,5 +1,5 @@
 import { Document, Link, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
-import type { PortfolioContent } from "@/content/portfolio";
+import { resumeItems, type PortfolioContent } from "@/content/portfolio";
 
 const styles = StyleSheet.create({
     page: { padding: 34, fontFamily: "Helvetica", fontSize: 9, color: "#18181b", lineHeight: 1.35 },
@@ -18,8 +18,6 @@ const styles = StyleSheet.create({
     tags: { color: "#3f3f46", fontSize: 8, marginTop: 2 },
 });
 
-const resumeItems = <T extends { includeInResume: boolean; visible: boolean; order: number }>(items: T[]) =>
-    items.filter((item) => item.visible && item.includeInResume).sort((a, b) => a.order - b.order);
 const pdfText = (value: string) => value.replace(/[—–]/g, "-");
 
 export function ResumeDocument({ content }: { content: PortfolioContent }) {

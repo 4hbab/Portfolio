@@ -14,7 +14,7 @@ export default function Projects() {
                 <SectionHeading
                     title="Projects"
                     subtitle="A selection of things I've built."
-                    accent="var(--color-accent-blue)"
+                    accent="var(--color-surface)"
                 />
 
                 <ProjectsClient projects={content.projects} allTags={allTags} />

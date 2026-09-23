@@ -88,7 +88,7 @@ export default function Navbar() {
         <nav
             ref={navRef}
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
-                    ? "bg-bg border-b-3 border-border py-3"
+                    ? "bg-bg border-b border-border py-3"
                     : "bg-transparent py-5"
                 }`}
         >
@@ -96,7 +96,7 @@ export default function Navbar() {
                 {/* Logo */}
                 <a
                     href="#"
-                    className="font-display text-2xl font-black tracking-tight text-text-primary hover:text-accent-pink transition-colors group"
+                    className="font-display text-2xl font-semibold tracking-tight text-text-primary hover:text-accent transition-colors group"
                     onClick={(e) => {
                         e.preventDefault();
                         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -113,7 +113,7 @@ export default function Navbar() {
                             <a
                                 href={link.href}
                                 onClick={(e) => handleNavClick(e, link.href)}
-                                className={`relative block px-4 py-2 text-sm font-bold uppercase tracking-wider transition-all duration-200 border-2 ${activeSection === link.href
+                                className={`relative block px-4 py-2 text-sm font-medium transition-all duration-200 border ${activeSection === link.href
                                         ? "bg-text-primary text-bg border-border"
                                         : "text-text-secondary border-transparent hover:bg-text-primary hover:text-bg hover:border-border"
                                     }`}
@@ -130,7 +130,7 @@ export default function Navbar() {
                 {/* Mobile Hamburger */}
                 <button
                     onClick={() => setMobileOpen(!mobileOpen)}
-                    className="md:hidden relative w-10 h-10 flex flex-col items-center justify-center gap-1.5 border-3 border-border bg-bg"
+                    className="md:hidden relative w-10 h-10 flex flex-col items-center justify-center gap-1.5 border border-border bg-bg"
                     aria-label={mobileOpen ? "Close menu" : "Open menu"}
                     aria-expanded={mobileOpen}
                 >
@@ -152,7 +152,7 @@ export default function Navbar() {
             {/* Mobile Menu */}
             <div
                 ref={mobileMenuRef}
-                className={`md:hidden overflow-hidden transition-all duration-300 border-t-3 border-border bg-bg ${mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0 border-t-0"
+                className={`md:hidden overflow-hidden transition-all duration-300 border-t border-border bg-bg ${mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0 border-t-0"
                     }`}
             >
                 <ul className="px-6 pb-6 pt-4 flex flex-col gap-2">
@@ -162,9 +162,9 @@ export default function Navbar() {
                                 data-mobile-link
                                 href={link.href}
                                 onClick={(e) => handleNavClick(e, link.href)}
-                                className={`block text-lg font-bold uppercase tracking-wider px-4 py-3 border-3 transition-all duration-200 ${activeSection === link.href
+                                className={`block text-base font-medium px-4 py-3 border transition-all duration-200 ${activeSection === link.href
                                         ? "bg-text-primary text-bg border-border"
-                                        : "text-text-primary border-transparent hover:border-border hover:bg-accent"
+                                        : "text-text-primary border-transparent hover:border-border hover:bg-surface"
                                     }`}
                             >
                                 {link.label}

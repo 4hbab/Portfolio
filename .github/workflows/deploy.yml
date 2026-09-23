@@ -1,5 +1,10 @@
 name: Deploy to GitHub Pages
 
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' && inputs.content_revision != ''
+  && format('Deploy for published revision {0}', inputs.content_revision)
+  || format('Deploy {0}', github.event.head_commit.message || github.sha) }}
+
 on:
   push:
     branches: ["v2"]
@@ -12,14 +17,33 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: "pages"
   cancel-in-progress: true
 
 jobs:
+  # The database policies are the actual authorization boundary: every owner
+  # write is gated by RLS and the aal2 check, not by anything in the client.
+  # They run in parallel with the build so verifying them costs no deploy time.
+  database:
+    name: Database policies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Postgres
+        run: supabase db start
+
+      - name: Run RLS and MFA policy tests
+        run: supabase test db
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -44,10 +68,17 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Verify published content
+        run: npm run verify:content
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+      # Also applies the content security policy to every emitted page; the
+      # build fails if any page would ship without it.
       - name: Build
         run: npm run build
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 
@@ -59,9 +90,13 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ github.event.repository.html_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Only the deploy job needs to write Pages or mint an id-token.
+    permissions:
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, database]
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

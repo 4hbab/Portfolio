@@ -23,7 +23,7 @@ export default function Chatbot() {
     useEffect(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
     useEffect(() => { if (isOpen) setTimeout(() => inputRef.current?.focus(), 200); }, [isOpen]);
 
-    const sendMessage = useCallback(async (rawText: string, retryAfterRefresh = true) => {
+    const sendMessage = useCallback(async (rawText: string, retryAfterRefresh = true, revisionOverride?: number) => {
         const text = rawText.trim();
         if (!text || isLoading || text.length > 4000) return;
         lastQuestionRef.current = text;
@@ -37,16 +37,15 @@ export default function Chatbot() {
         controllerRef.current = controller;
         let answer = "";
         try {
-            const result = await streamChat(history, revision, (chunk) => {
+            const result = await streamChat(history, revisionOverride ?? revision, (chunk) => {
                 answer += chunk;
                 setMessages([...history, { role: "assistant", content: answer }]);
             }, controller.signal);
             setSources(result.sources);
             if (result.stale && retryAfterRefresh) {
-                await refresh();
-                setMessages(messages);
+                const fresh = await refresh(true);
                 setIsLoading(false);
-                await sendMessage(text, false);
+                await sendMessage(text, false, fresh);
                 return;
             }
         } catch (caught) {
