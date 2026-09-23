@@ -31,8 +31,8 @@ export default function ResumeDownloadButton({ mobile = false }: { mobile?: bool
             onClick={() => void download()}
             disabled={busy}
             className={mobile
-                ? "inline-block text-left text-lg font-bold uppercase tracking-wider px-4 py-3 bg-accent text-text-primary border-3 border-border hard-shadow disabled:opacity-60"
-                : "block text-sm font-bold uppercase tracking-wider px-5 py-2 bg-accent text-text-primary border-3 border-border hard-shadow hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[6px_6px_0_var(--color-border)] transition-all duration-200 disabled:opacity-60"}
+                ? "inline-block text-left text-base font-medium px-4 py-3 bg-accent text-accent-fg border border-accent hard-shadow disabled:opacity-60"
+                : "block text-sm font-medium px-5 py-2 bg-accent text-accent-fg border border-accent hard-shadow transition-all duration-200 disabled:opacity-60"}
         >
             {busy ? "Preparing…" : "Resume"}
         </button>

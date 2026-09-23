@@ -1,4 +1,10 @@
 begin;
+
+-- pgTAP is a test-only dependency. Created inside the transaction this file
+-- rolls back, so it is available to `supabase test db` without a production
+-- migration ever installing a testing framework into the live database.
+create extension if not exists pgtap;
+
 select plan(8);
 
 insert into auth.users(id, email) values

@@ -112,31 +112,30 @@ export default function Contact() {
             />
 
             <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
-                {/* Giant heading */}
                 <div className="mb-12">
-                    <h2 className="font-display font-black leading-[0.9] tracking-tighter">
+                    <h2 className="font-display font-semibold leading-[0.9] tracking-tight">
                         <span
                             data-contact-word-1
-                            className="block text-6xl md:text-8xl lg:text-9xl text-text-inverse"
+                            className="block text-3xl md:text-4xl text-text-inverse"
                         >
-                            LET&apos;S
+                            Let&apos;s
                         </span>
                         <span
                             data-contact-word-2
-                            className="block text-7xl md:text-9xl lg:text-[10rem] text-stroke-white"
+                            className="block text-3xl md:text-4xl text-text-inverse/50"
                         >
-                            TALK
+                            talk
                         </span>
                         <span
                             data-contact-dot
-                            className="inline-block w-5 h-5 md:w-8 md:h-8 bg-accent-pink ml-2 align-middle"
+                            className="inline-block w-2 h-2 bg-accent ml-2 align-middle"
                         />
                     </h2>
                 </div>
 
                 <div
                     data-contact-card
-                    className="border-3 border-text-inverse/30 bg-text-inverse/5 p-8 md:p-12 mb-10 overflow-hidden"
+                    className="border border-text-inverse/30 bg-text-inverse/5 p-8 md:p-12 mb-10 overflow-hidden"
                 >
                     <p className="text-text-inverse/80 text-base md:text-lg leading-relaxed mb-8 font-medium">
                         I&apos;m always open to discussing new projects, creative ideas, or
@@ -147,7 +146,7 @@ export default function Contact() {
 
                     <Button
                         href={`mailto:${content.profile.email}`}
-                        className="bg-accent-pink text-text-inverse border-text-inverse/30 hover:bg-accent hover:text-text-primary"
+                        className="bg-accent text-accent-fg border-accent hover:bg-accent-hover hover:text-accent-fg hover:border-accent-hover"
                     >
                         <svg
                             className="w-5 h-5"
@@ -175,10 +174,10 @@ export default function Contact() {
                             href={link.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="group w-12 h-12 flex items-center justify-center border-3 border-text-inverse/30 text-text-inverse hover:bg-accent hover:text-text-primary hover:border-accent transition-all duration-200 hover:-translate-y-1 hover:rotate-[-6deg]"
+                            className="group w-12 h-12 flex items-center justify-center border border-text-inverse/30 text-text-inverse hover:bg-accent hover:text-accent-fg hover:border-accent transition-all duration-200"
                             aria-label={link.label}
                         >
-                            <span className="font-black text-sm" aria-hidden="true">{link.label.slice(0, 2).toUpperCase()}</span>
+                            <span className="font-semibold text-sm" aria-hidden="true">{link.label.slice(0, 2).toUpperCase()}</span>
                         </a>
                     ))}
                 </div>

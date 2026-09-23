@@ -18,25 +18,49 @@ A high-performance, accessible portfolio site built with **Next.js (App Router)*
 
 ```bash
 npm install
-npm run dev       # http://localhost:3000
-npm run build     # Produces out/ for static hosting
-npm run lint      # ESLint
-npm run typecheck # tsc --noEmit
+npm run dev            # http://localhost:3000
+npm run build          # Produces out/, then applies the CSP to every page
+npm run lint           # ESLint
+npm run typecheck      # tsc --noEmit
+npm test               # Vitest
+npm run verify:content # Fails if the published snapshot no longer fits the schema
+npm run resume:pdf -- resume.pdf
+```
+
+Database policy tests run against a local Supabase (requires Docker):
+
+```bash
+supabase db start && supabase test db
 ```
 
 ## Project Structure
 
 ```
 src/
-├── app/              # Next.js App Router (layout, page, globals)
+├── app/              # App Router (layout, page, globals, /admin)
 ├── components/
+│   ├── admin/        # Content studio (auth, MFA gate, editor)
+│   ├── resume/       # React-PDF document and generation
 │   ├── sections/     # Hero, About, Experience, Projects, Contact
-│   └── ui/           # Button, Navbar, Footer, SectionHeading
-├── content/          # Data files (projects.ts, experience.ts, socials.ts)
+│   └── ui/           # Button, Navbar, Footer, SectionHeading, Chatbot
+├── content/          # portfolio.ts — the versioned content schema and fallback
 └── lib/
-    ├── animation/    # GSAP presets, reduced-motion hook
-    └── seo/          # Metadata
+    ├── animation/    # GSAP tokens, reduced-motion hook, magnetic cursor
+    ├── seo/          # Metadata and the content security policy
+    ├── supabase/     # Browser client, MFA helpers, generated types
+    ├── content.ts    # Published-snapshot reads and the schema-drift error
+    └── site.ts       # Deployment identity (base path, origin, repository)
+
+supabase/
+├── functions/        # recruiter-chat, trigger-rebuild, import-github-projects
+├── migrations/       # Schema, RLS policies, and the SECURITY DEFINER writes
+└── tests/            # pgTAP policy tests (the authorization boundary)
 ```
+
+`src/lib/site.ts` and `supabase/functions/_shared/config.ts` hold the same
+deployment identity for the two runtimes. The Supabase bundler only ships what
+lives under `supabase/functions/`, so the functions read it from their own
+environment instead of importing it.
 
 ## Content management
 
@@ -46,9 +70,14 @@ Copy `.env.example` to `.env.local` for local development. Full provisioning, re
 
 ## Deployment
 
-Push to `v2` to trigger `.github/workflows/deploy.yml`, which runs lint, typecheck, tests, build, and deploy. Publishing content updates visitors immediately and securely requests a background rebuild so static metadata and the outage fallback stay current.
+Push to `v2` to trigger `.github/workflows/deploy.yml`. It runs the database
+policy tests in parallel with lint, typecheck, unit tests, published-content
+verification, and the build; both must pass before deploy. Publishing content
+updates visitors immediately and requests a background rebuild so static
+metadata and the outage fallback stay current.
 
-Set `basePath` in `next.config.ts` to match your repo name (default: `/Portfolio`).
+Renaming the repository means changing `GITHUB_REPO` in `src/lib/site.ts` and
+setting `GITHUB_REPO` as a function secret — nothing else hardcodes it.
 
 ## Guardrails Checklist
 
@@ -60,10 +89,18 @@ Set `basePath` in `next.config.ts` to match your repo name (default: `/Portfolio
 **Security**
 - [x] Dependabot enabled
 - [x] No secrets in repo
-- [x] No unpinned third-party scripts
+- [x] No third-party scripts; all assets are same-origin (fonts are self-hosted)
+- [x] Content security policy applied to every page at build time
 - [x] Gemini and GitHub credentials remain server-side
 - [x] Owner writes require MFA and database authorization
+- [x] RLS and MFA policies are tested in CI, not only by hand
+- [x] Only `recruiter-chat` holds a service-role key; owner functions act as the caller
+- [x] Content is schema-validated on read, on write, and in the database
 - [x] External links use `rel="noopener noreferrer"`
+- [ ] `frame-ancestors` — unavailable: GitHub Pages cannot set response headers,
+      and a `<meta>` CSP ignores that directive. Clickjacking is unmitigated.
+- [ ] `script-src` uses `'unsafe-inline'` — a static export has no nonce to use
+      instead, so injected inline script is not blocked by the policy.
 
 **UX**
 - [x] Reduced motion supported

@@ -5,29 +5,38 @@ import { ease } from "@/lib/animation/presets";
 import { useReducedMotion } from "@/lib/animation/reducedMotion";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePortfolio } from "@/components/PortfolioProvider";
 
 gsap.registerPlugin(useGSAP);
 
 export default function About() {
     const { content } = usePortfolio();
-    const skills = content.skillGroups.flatMap((group) => group.skills);
+    // Categories render as their own rows, but hover and the staggered reveal
+    // still address one flat sequence, so each badge keeps its global index.
+    const skillCategories = useMemo(() => {
+        let index = 0;
+        return content.skillGroups.map((group) => ({
+            id: group.id,
+            name: group.name,
+            skills: group.skills.map((skill) => ({ skill, index: index++ })),
+        }));
+    }, [content.skillGroups]);
     const rootRef = useRef<HTMLElement>(null);
     const reducedMotion = useReducedMotion();
-    const [revealed, setRevealed] = useState(false);
+    const [intersected, setIntersected] = useState(false);
     const [hoveredSkill, setHoveredSkill] = useState<number | null>(null);
+    // Derived rather than set from inside the effect: with reduced motion there
+    // is nothing to wait for, so there is no state transition to schedule.
+    const revealed = reducedMotion || intersected;
 
     useEffect(() => {
-        if (reducedMotion) {
-            setRevealed(true);
-            return;
-        }
+        if (reducedMotion) return;
 
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries[0].isIntersecting) {
-                    setRevealed(true);
+                    setIntersected(true);
                     observer.disconnect();
                 }
             },
@@ -93,6 +102,14 @@ export default function About() {
                     grid: [4, 4],
                 },
             });
+
+            gsap.from("[data-skill-group]", {
+                opacity: 0,
+                x: -24,
+                duration: 0.6,
+                ease: "power2.out",
+                stagger: 0.08,
+            });
         },
         { scope: rootRef, dependencies: [reducedMotion, revealed] }
     );
@@ -117,7 +134,9 @@ export default function About() {
         if (reducedMotion) return;
         setHoveredSkill(isHovering ? index : null);
 
-        const skillElement = document.querySelector(
+        // Scoped to this section: a document-wide lookup would animate any
+        // matching element another section happened to render.
+        const skillElement = rootRef.current?.querySelector(
             `[data-skill-index="${index}"]`
         );
         if (!skillElement) return;
@@ -126,7 +145,7 @@ export default function About() {
             gsap.to(skillElement, {
                 y: -8,
                 scale: 1.08,
-                boxShadow: "8px 8px 0 var(--color-accent-pink), 16px 16px 0 rgba(0,0,0,0.1)",
+                boxShadow: "8px 8px 0 var(--color-accent), 16px 16px 0 rgba(0,0,0,0.1)",
                 rotation: 2,
                 duration: 0.3,
                 ease: "power2.out",
@@ -175,13 +194,12 @@ export default function About() {
                         {/* Decorative accent line */}
                         <div
                             data-accent-line
-                            className="absolute -left-6 top-0 h-1 bg-gradient-to-r from-accent-pink via-accent-pink to-transparent"
+                            className="absolute -left-6 top-0 h-1 bg-gradient-to-r from-accent via-accent to-transparent"
                             style={{ width: "0%" }}
                         />
-
                         {content.bio.map((entry) => (
                             <div key={entry.id} data-bio className="overflow-hidden perspective">
-                                <div className={`group relative p-6 border-3 border-border hard-shadow hover:border-accent-pink transition-colors duration-300 ${entry.highlighted ? "bg-accent/30" : "bg-bg-card"}`}>
+                                <div className={`group relative p-6 border border-border hard-shadow hover:border-accent transition-colors duration-300 ${entry.highlighted ? "bg-accent-subtle" : "bg-bg-card"}`}>
                                     <p className="text-text-secondary text-base md:text-lg leading-relaxed font-medium">
                                         {entry.text}
                                     </p>
@@ -194,60 +212,74 @@ export default function About() {
                     <div className="relative">
                         <h3
                             data-tech-heading
-                            className="font-display text-2xl md:text-3xl font-black text-text-primary mb-8 uppercase tracking-wider"
+                            className="font-display text-lg font-semibold text-text-primary mb-8 tracking-tight"
                         >
                             Tech Stack
-                            <span className="text-accent-pink animate-pulse ml-1">.</span>
+                            <span className="text-accent animate-pulse ml-1">.</span>
                         </h3>
 
-                        {/* Skills Grid */}
-                        <div className="grid grid-cols-2 gap-4 md:gap-5">
-                            {skills.map((skill, i) => (
-                                <div
-                                    key={skill}
-                                    data-skill
-                                    data-skill-index={i}
-                                    onMouseEnter={() => handleSkillHover(i, true)}
-                                    onMouseLeave={() => handleSkillHover(i, false)}
-                                    className="relative group cursor-pointer perspective"
-                                >
-                                    {/* Glow effect on hover */}
-                                    <div className="absolute -inset-1 bg-gradient-to-br from-accent-pink/40 to-accent/20 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl -z-10" />
-
-                                    {/* Main badge */}
-                                    <div
-                                        className={`
-                                            px-4 py-3 border-3 border-border bg-bg-card text-text-primary text-xs md:text-sm font-black uppercase tracking-widest
-                                            hard-shadow transition-all duration-300 relative overflow-hidden
-                                            ${
-                                                hoveredSkill === i
-                                                    ? "border-accent-pink bg-accent"
-                                                    : "border-border bg-bg-card"
-                                            }
-                                        `}
+                        {/* Skills by category */}
+                        <div className="space-y-8">
+                            {skillCategories.map((group) => (
+                                <div key={group.id}>
+                                    <h4
+                                        data-skill-group
+                                        className="flex items-center gap-3 font-mono text-xs uppercase tracking-[0.08em] text-text-muted mb-3"
                                     >
-                                        {/* Animated shine effect on hover */}
-                                        <div
-                                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                                            style={{
-                                                transform: hoveredSkill === i ? "translateX(100%)" : "translateX(-100%)",
-                                                transitionProperty: "transform",
-                                                transitionDuration: "0.6s",
-                                            }}
-                                        />
+                                        {group.name}
+                                        <span aria-hidden className="h-0.5 flex-1 bg-border/40" />
+                                    </h4>
 
-                                        {/* Text with stagger effect */}
-                                        <span className="relative block">{skill}</span>
+                                    <div className="grid grid-cols-2 gap-3 md:gap-4">
+                                        {group.skills.map(({ skill, index }) => (
+                                            <div
+                                                key={skill}
+                                                data-skill
+                                                data-skill-index={index}
+                                                onMouseEnter={() => handleSkillHover(index, true)}
+                                                onMouseLeave={() => handleSkillHover(index, false)}
+                                                className="relative group cursor-pointer perspective"
+                                            >
+                                                {/* Glow effect on hover */}
+                                                <div className="absolute -inset-1 bg-gradient-to-br from-accent/40 to-accent/20 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl -z-10" />
 
-                                        {/* Corner accent */}
-                                        <div className="absolute top-0 right-0 w-2 h-2 bg-accent-pink opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                                {/* Main badge */}
+                                                <div
+                                                    className={`
+                                                        px-3 py-2 rounded-md border border-border bg-bg-card text-text-secondary font-mono text-xs
+                                                        hard-shadow transition-all duration-300 relative overflow-hidden
+                                                        ${
+                                                            hoveredSkill === index
+                                                                ? "border-accent bg-accent-subtle text-text-primary"
+                                                                : "border-border bg-bg-card"
+                                                        }
+                                                    `}
+                                                >
+                                                    {/* Animated shine effect on hover */}
+                                                    <div
+                                                        className="absolute inset-0 bg-gradient-to-r from-transparent via-accent/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                                                        style={{
+                                                            transform: hoveredSkill === index ? "translateX(100%)" : "translateX(-100%)",
+                                                            transitionProperty: "transform",
+                                                            transitionDuration: "0.6s",
+                                                        }}
+                                                    />
+
+                                                    {/* Text with stagger effect */}
+                                                    <span className="relative block">{skill}</span>
+
+                                                    {/* Corner accent */}
+                                                    <div className="absolute top-0 right-0 w-2 h-2 bg-accent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             ))}
                         </div>
 
                         {/* Decorative element */}
-                        <div className="absolute -bottom-20 -right-20 w-40 h-40 border-2 border-border/20 rounded opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
+                        <div className="absolute -bottom-20 -right-20 w-40 h-40 border border-border/20 rounded opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
                     </div>
                 </div>
             </div>

@@ -1,9 +1,21 @@
 import { z } from "zod";
 
-const safeUrl = z.string().url().refine((value) => {
-    const protocol = new URL(value).protocol;
-    return protocol === "https:" || protocol === "mailto:";
-}, "Only HTTPS and mailto links are allowed");
+const ALLOWED_PROTOCOLS = new Set(["https:", "mailto:"]);
+
+/**
+ * One total check, deliberately not `.url()` followed by a refinement. Zod runs
+ * every check even after an earlier one fails, so the refinement would still see
+ * a malformed value and `new URL(value)` would throw straight out of
+ * `safeParse` — turning "invalid content" into an exception for every caller
+ * that reasonably expects `{ success: false }`, including the build-time gate.
+ */
+const safeUrl = z.string().min(1).max(2048).refine((value) => {
+    try {
+        return ALLOWED_PROTOCOLS.has(new URL(value).protocol);
+    } catch {
+        return false;
+    }
+}, "Only absolute https:// and mailto: links are allowed");
 
 const itemFields = {
     id: z.string().min(1).max(80),
@@ -86,8 +98,17 @@ export interface PublicContentResponse {
     content: PortfolioContent;
 }
 
+const byOrder = (a: { order: number }, b: { order: number }) => a.order - b.order;
+
 const visibleByOrder = <T extends { visible: boolean; order: number }>(items: T[]) =>
-    items.filter((item) => item.visible).sort((a, b) => a.order - b.order);
+    items.filter((item) => item.visible).sort(byOrder);
+
+/**
+ * What the PDF carries: visible on the site *and* marked for the resume. Lives
+ * beside `visibleContent` so the two orderings cannot drift apart.
+ */
+export const resumeItems = <T extends { visible: boolean; includeInResume: boolean; order: number }>(items: T[]) =>
+    items.filter((item) => item.visible && item.includeInResume).sort(byOrder);
 
 export function visibleContent(content: PortfolioContent): PortfolioContent {
     return {
@@ -127,25 +148,33 @@ export const fallbackContent: PortfolioContent = portfolioContentSchema.parse({
         ["exp-6", "Kernel Technologies", "Intern", "Jun 2022 — Sep 2022", "Developed full-stack features using React and MySQL, gaining foundational experience in production software development workflows.", ["MySQL", "React.js", "JavaScript", "Node.js"]],
     ].map(([id, company, role, period, description, tags], order) => ({ id, company, role, period, description, tags, order, visible: true, includeInResume: true })),
     education: [{ id: "edu-1", degree: "B.Sc. in Computer Science and Engineering", institution: "Islamic University of Technology (IUT)", period: "Graduated", details: "Studied computer science fundamentals, algorithms, data structures, databases, software engineering, and AI/ML.", order: 0, visible: true, includeInResume: true }],
+    // Grouped the way engineering resumes and job specs are read: languages
+    // first, then the stack front to back, then delivery. The order is the
+    // order they render in, on the site and in the PDF.
     skillGroups: [
-        ["skills-backend", "Backend & APIs", ["Node.js", "Python", "FastAPI", "ColdFusion", "Lucee", "Express"]],
-        ["skills-frontend", "Frontend", ["React", "Next.js", "Vue.js", "Quasar", "Angular", "TypeScript", "JavaScript", "Tailwind CSS"]],
-        ["skills-db", "Databases", ["MariaDB", "PostgreSQL", "MongoDB", "MySQL", "Prisma"]],
-        ["skills-devops", "DevOps & Tools", ["Docker", "Git", "CI/CD", "GitHub Actions"]],
-        ["skills-other", "Other", ["Solidity", "Web3.js", "Firebase", "FFmpeg"]],
+        ["skills-languages", "Languages", ["TypeScript", "JavaScript", "Python", "Solidity", "ColdFusion"]],
+        ["skills-frontend", "Frontend", ["React", "Next.js", "Vue.js", "Angular", "Quasar", "Tailwind CSS"]],
+        ["skills-backend", "Backend & APIs", ["Node.js", "Express", "FastAPI", "Lucee"]],
+        ["skills-data", "Databases & ORMs", ["PostgreSQL", "MariaDB", "MySQL", "MongoDB", "Prisma"]],
+        ["skills-devops", "DevOps & CI/CD", ["Docker", "GitHub Actions", "CI/CD", "Git"]],
+        ["skills-platforms", "Platforms & Tools", ["Firebase", "Web3.js", "FFmpeg"]],
     ].map(([id, name, skills], order) => ({ id, name, skills, order, visible: true, includeInResume: true })),
     achievements: [
         ["achievement-1", "1st Runners Up at WellDev Hackathon & CTF 2024"],
         ["achievement-2", "1st Place in WellDev CTF Competition 2024"],
         ["achievement-3", "#100DaysOfDevOps challenge participant"],
     ].map(([id, title], order) => ({ id, title, details: "", order, visible: true, includeInResume: true })),
+    // The three that carry the most engineering weight lead and are the only
+    // ones shown or carried into the resume; the rest stay here, hidden, so
+    // they can be brought back from the admin without retyping them.
     projects: [
-        ["project-1", "Clipz", "A video clip sharing platform with upload, streaming, and social features for content creators.", ["Angular", "Firebase", "FFmpeg", "TypeScript"], "TypeScript", "https://github.com/4hbab/Clipz", true],
-        ["project-2", "Crowdfunding Solitidy", "A decentralized crowdfunding platform built on Ethereum using Solidity smart contracts.", ["Solidity", "Ethereum", "Web3.js", "React"], "Solidity", "https://github.com/4hbab/Crowdfunding-Solitidy", true],
-        ["project-3", "Expenses Tracker React", "A React-based personal finance tracker for managing daily expenses with category-wise breakdowns and visualizations.", ["React", "JavaScript", "CSS"], "JavaScript", "https://github.com/4hbab/expenses-tracker-react", true],
-        ["project-4", "Bulky MVC", "An ASP.NET Core MVC online bookstore management application with full CRUD operations.", ["ASP.NET Core", "C#", "MVC", "SQL Server"], "C#", "https://github.com/4hbab/Bulky_MVC", false],
-        ["project-5", "Book Library API", "A RESTful API for managing a book library with CRUD operations, search, and categorization features.", ["Node.js", "Express", "MongoDB", "REST"], "JavaScript", "https://github.com/4hbab/Book-Library-API", false],
-    ].map(([id, title, description, tags, language, repoUrl, featured], order) => ({ id, title, description, tags, language, repoUrl, featured, order, visible: true, includeInResume: order < 3, stars: 0 })),
+        { id: "project-pyplayground", title: "PyPlayground", description: "A browser-based Python coding playground. A Go backend handles GitHub authentication and saved snippets, while Pyodide runs Python inside a WebAssembly web worker so submitted code executes in the visitor's browser rather than on the server. Monaco editor, full tracebacks, keyboard shortcuts, and light and dark themes.", tags: ["Go", "WebAssembly", "Pyodide", "Monaco Editor"], language: "Go", stars: 0, repoUrl: "https://github.com/4hbab/coding-playground", featured: true, order: 0, visible: true, includeInResume: true },
+        { id: "project-2", title: "CrowdChain", description: "A decentralized crowdfunding platform on Ethereum. The Solidity contract escrows ETH contributions until the deadline: creators withdraw once the funding goal is met, and backers reclaim their contributions when it is not. Paired with a Web3 frontend for wallet connection and campaign management.", tags: ["Solidity", "Ethereum", "Web3.js", "Smart Contracts"], language: "Solidity", stars: 0, repoUrl: "https://github.com/4hbab/Crowdfunding-Solitidy", featured: true, order: 1, visible: true, includeInResume: true },
+        { id: "project-1", title: "Clipz", description: "A video clip sharing platform built on Angular 18 standalone components, with Firebase behind authentication, uploads, and clip metadata. Uploaded video is processed in the browser with ffmpeg.wasm, playback runs on Video.js, and Cypress covers the end-to-end flows.", tags: ["Angular", "TypeScript", "Firebase", "FFmpeg"], language: "TypeScript", stars: 0, repoUrl: "https://github.com/4hbab/Clipz", featured: true, order: 2, visible: true, includeInResume: true },
+        { id: "project-4", title: "Bulky MVC", description: "An ASP.NET Core MVC online bookstore built on a three-tier architecture with EF Core, the repository pattern, and scaffolded Identity for authentication.", tags: ["ASP.NET Core", "C#", "EF Core", "SQL Server"], language: "C#", stars: 1, repoUrl: "https://github.com/4hbab/Bulky_MVC", featured: false, order: 3, visible: false, includeInResume: false },
+        { id: "project-3", title: "Expenses Tracker React", description: "A React personal finance tracker for logging daily expenses with category-wise breakdowns and visualizations.", tags: ["React", "JavaScript", "CSS"], language: "JavaScript", stars: 0, repoUrl: "https://github.com/4hbab/expenses-tracker-react", featured: false, order: 4, visible: false, includeInResume: false },
+        { id: "project-5", title: "Book Library API", description: "A RESTful API for managing a book library with CRUD operations, search, and categorization.", tags: ["Node.js", "Express", "MongoDB", "REST"], language: "JavaScript", stars: 0, repoUrl: "https://github.com/4hbab/Book-Library-API", featured: false, order: 5, visible: false, includeInResume: false },
+    ],
     links: [
         { id: "link-github", label: "GitHub", url: "https://github.com/4hbab", kind: "github", order: 0, visible: true, includeInResume: true },
         { id: "link-linkedin", label: "LinkedIn", url: "https://www.linkedin.com/in/sakif-ahbab-a939b3228", kind: "linkedin", order: 1, visible: true, includeInResume: true },

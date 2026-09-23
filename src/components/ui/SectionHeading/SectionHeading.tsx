@@ -93,11 +93,8 @@ export default function SectionHeading({
             {/* Rotated accent label */}
             <span
                 data-heading-label
-                className="inline-block font-display text-xs font-bold uppercase tracking-[0.3em] px-4 py-2 border-3 border-border mb-6"
-                style={{
-                    transform: "rotate(-2deg)",
-                    background: accent || "var(--color-accent)",
-                }}
+                className="inline-block font-mono text-xs uppercase tracking-[0.08em] text-text-muted mb-3"
+                style={{ background: accent }}
             >
                 {title}
             </span>
@@ -105,7 +102,7 @@ export default function SectionHeading({
             {/* Giant title */}
             <h2
                 data-heading-title
-                className="font-display text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-text-primary leading-[0.95] tracking-tight"
+                className="font-display text-2xl md:text-3xl font-semibold text-text-primary leading-tight tracking-tight"
             >
                 {title}
             </h2>
@@ -113,7 +110,7 @@ export default function SectionHeading({
             {/* Thick underline */}
             <div
                 data-heading-line
-                className={`h-1.5 bg-border mt-4 origin-left ${align === "center" ? "mx-auto w-32" : "w-24"}`}
+                className={`h-px bg-border mt-5 origin-left ${align === "center" ? "mx-auto w-16" : "w-12"}`}
             />
 
             {subtitle && (

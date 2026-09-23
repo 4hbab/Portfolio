@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
-import { DM_Sans, Bebas_Neue } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { siteMetadata } from "@/lib/seo/metadata";
 import "./globals.css";
 
-const dmSans = DM_Sans({
+const inter = Inter({
     subsets: ["latin"],
-    variable: "--font-sans",
+    variable: "--font-inter",
     display: "swap",
 });
 
-const bebasNeue = Bebas_Neue({
-    weight: "400",
+const jetbrainsMono = JetBrains_Mono({
     subsets: ["latin"],
-    variable: "--font-display",
+    variable: "--font-jetbrains-mono",
     display: "swap",
 });
 
@@ -24,7 +23,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en" className={`${dmSans.variable} ${bebasNeue.variable}`}>
+        <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
             <body>
                 <a href="#main-content" className="skip-to-content">
                     Skip to content
