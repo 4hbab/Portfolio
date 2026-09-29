@@ -71,7 +71,7 @@ export const portfolioContentSchema = z.object({
         tags: z.array(z.string().min(1).max(60)).max(30),
         language: z.string().max(60).nullable(),
         stars: z.number().int().min(0),
-        repoUrl: safeUrl,
+        repoUrl: safeUrl.optional(),
         liveUrl: safeUrl.optional(),
         featured: z.boolean(),
     })).max(50),

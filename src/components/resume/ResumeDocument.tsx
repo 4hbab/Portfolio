@@ -64,7 +64,7 @@ export function ResumeDocument({ content }: { content: PortfolioContent }) {
                     {projects.map((project) => <View key={project.id} style={styles.row} wrap={false}>
                         <View style={styles.rowHeader}>
                             <Text style={styles.strong}>{project.title}</Text>
-                            <Link src={project.repoUrl} style={styles.link}>Repository</Link>
+                            {project.repoUrl && <Link src={project.repoUrl} style={styles.link}>Repository</Link>}
                         </View>
                         <Text style={styles.body}>{project.description}</Text>
                         <Text style={styles.tags}>{project.tags.join(" · ")}</Text>

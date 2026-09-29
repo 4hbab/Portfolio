@@ -35,6 +35,11 @@ describe("portfolio content contract", () => {
         expect(result?.success).toBe(false);
     });
 
+    it("accepts a project without a repository or live URL", () => {
+        const candidate = { ...fallbackContent, projects: [{ ...fallbackContent.projects[0], repoUrl: undefined, liveUrl: undefined }] };
+        expect(portfolioContentSchema.safeParse(candidate).success).toBe(true);
+    });
+
     it("keeps an optional project liveUrl total", () => {
         const candidate = { ...fallbackContent, projects: [{ ...fallbackContent.projects[0], liveUrl: "www.example.com" }] };
         expect(() => portfolioContentSchema.safeParse(candidate)).not.toThrow();
