@@ -270,8 +270,8 @@ p {
 
 /* ── Hero ──
    Display lines (the hero name, the contact headline) are set narrow (wdth
-   85), which is where the face reads most like itself. The glow is the page's
-   single ambient element. */
+   85), which is where the face reads most like itself. The signal field
+   (HeroField) is the page's single ambient element; the glow is static. */
 .type-narrow {
   font-variation-settings: "wdth" 85;
   font-weight: 650;
@@ -303,9 +303,20 @@ p {
   width: min(70vw, 760px);
   aspect-ratio: 1;
   border-radius: 9999px;
-  background: radial-gradient(closest-side, rgb(111 211 180 / 0.16), rgb(111 211 180 / 0.05) 55%, transparent);
+  background: radial-gradient(closest-side, rgb(111 211 180 / 0.13), rgb(111 211 180 / 0.04) 55%, transparent);
   filter: blur(24px);
-  will-change: transform;
+}
+
+/* Faded toward the edges and away from the copy column, so the field frames
+   the name instead of sitting behind the reading text at full strength. */
+.hero-field {
+  mask-image: radial-gradient(ellipse 75% 70% at 62% 50%, black 30%, transparent 78%);
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+.hero-field[data-ready] {
+  opacity: 1;
 }
 
 .hero-grain {
@@ -315,12 +326,14 @@ p {
 }
 
 /* ── Experience timeline ──
-   The rail's centre is at 6px (mobile) or 201px (md+); dots are centred on
-   the same x. Dots are lit at rest; the scrub unlights them only when motion
-   is allowed, so no-JS and reduced motion see the finished state. */
+   Phones: rail down the left (centre at 6px), period above each card.
+   md+: rail down the centre, cards alternating sides, each period on the far
+   side of the rail from its card. Dots, connectors and the card tint are on at
+   rest; the scrub turns them off only when motion is allowed, so no-JS and
+   reduced motion see the finished state. */
 .exp-rail {
   position: absolute;
-  top: 0.6rem;
+  top: 0.4rem;
   bottom: 0;
   left: 5px;
   width: 2px;
@@ -343,12 +356,25 @@ p {
 }
 
 .exp-period {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.exp-card {
+  padding: 1.25rem 1.25rem 1.5rem;
+  transition: border-color 0.4s ease;
+}
+
+.exp-entry.is-reached .exp-card {
+  border-color: rgb(111 211 180 / 0.22);
+}
+
+.exp-card:hover {
+  border-color: var(--color-border-strong);
 }
 
 .exp-dot {
   position: absolute;
-  top: 0.55rem;
+  top: 0.35rem;
   left: 6px;
   width: 11px;
   height: 11px;
@@ -365,29 +391,85 @@ p {
   box-shadow: 0 0 0 5px rgb(111 211 180 / 0.14);
 }
 
+/* Drawn from the dot out to the card when the rail reaches the entry. */
+.exp-connector {
+  display: none;
+  position: absolute;
+  height: 1.5px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s;
+}
+
+.exp-entry.is-reached .exp-connector {
+  transform: scaleX(1);
+}
+
 @media (min-width: 768px) {
   .exp-rail {
-    left: 200px;
+    top: 2.4rem;
+    left: calc(50% - 1px);
   }
 
+  /* Columns: card | 4.5rem gutter holding the rail | card. Every child sits in
+     row 1, so a card and the period opposite it share a row. */
   .exp-entry {
     display: grid;
-    grid-template-columns: 200px 1fr;
+    grid-template-columns: 1fr 4.5rem 1fr;
+    align-items: start;
     padding-left: 0;
+  }
+
+  .exp-entry > * {
+    grid-row: 1;
+  }
+
+  .exp-card {
+    padding: 1.5rem 1.75rem 1.75rem;
+  }
+
+  /* The dot sits level with the card title: card padding plus half a title line. */
+  .exp-dot {
+    top: calc(2.4rem - 5.5px);
+    left: 50%;
   }
 
   .exp-period {
     margin: 0;
-    padding: 0.3rem 2.5rem 0 0;
+    padding-top: 1.75rem;
+  }
+
+  .exp-connector {
+    display: block;
+    top: calc(2.4rem - 0.75px);
+    width: calc(2.25rem - 6px);
+  }
+
+  .exp-entry[data-side="left"] .exp-card {
+    grid-column: 1;
+  }
+
+  .exp-entry[data-side="left"] .exp-period {
+    grid-column: 3;
+  }
+
+  .exp-entry[data-side="left"] .exp-connector {
+    right: calc(50% + 6px);
+    transform-origin: right;
+  }
+
+  .exp-entry[data-side="right"] .exp-card {
+    grid-column: 3;
+  }
+
+  .exp-entry[data-side="right"] .exp-period {
+    grid-column: 1;
     text-align: right;
   }
 
-  .exp-entry [data-exp-body] {
-    padding-left: 2.5rem;
-  }
-
-  .exp-dot {
-    left: 201px;
+  .exp-entry[data-side="right"] .exp-connector {
+    left: calc(50% + 6px);
+    transform-origin: left;
   }
 }
 

@@ -12,9 +12,11 @@ import { duration, ease, media } from "@/lib/animation/presets";
 const READ_LINE = "top 65%";
 
 /**
- * One of the page's three bold moments. The rail is drawn with DrawSVG,
- * scrubbed to scroll, and each entry lights its dot as the line reaches it.
- * At rest (no JS, reduced motion) the line is fully drawn and every dot lit.
+ * One of the page's three bold moments. A straight rail runs down the centre
+ * (down the left on phones) with entries alternating either side of it. The
+ * rail is drawn with DrawSVG, scrubbed to scroll; as it reaches an entry the
+ * dot lights, a connector draws out to the card, and the card slides in from
+ * its own side. At rest (no JS, reduced motion) everything is drawn and lit.
  */
 export default function Experience() {
     const { content } = usePortfolio();
@@ -24,7 +26,9 @@ export default function Experience() {
     useGSAP(
         () => {
             const mm = gsap.matchMedia();
-            mm.add(media.motion, () => {
+            mm.add({ motion: media.motion, wide: media.wide }, (context) => {
+                const { motion, wide } = context.conditions as { motion: boolean; wide: boolean };
+                if (!motion) return;
                 gsap.fromTo(
                     "[data-rail-fill]",
                     { drawSVG: "0%" },
@@ -42,11 +46,16 @@ export default function Experience() {
                         start: READ_LINE,
                         toggleClass: { targets: entry, className: "is-reached" },
                     });
-                    gsap.from(entry.querySelector("[data-exp-body]"), {
+                    // Each card arrives from its own side of the rail; on a phone
+                    // everything is on one side, so it rises instead.
+                    const fromLeft = entry.dataset.side === "left";
+                    gsap.from(entry.querySelectorAll("[data-exp-body], .exp-period"), {
                         autoAlpha: 0,
-                        y: 24,
+                        x: wide ? (fromLeft ? -48 : 48) : 0,
+                        y: wide ? 0 : 24,
                         duration: duration.base,
                         ease: ease.out,
+                        stagger: 0.08,
                         scrollTrigger: { trigger: entry, start: "top 85%", once: true },
                     });
                 });
@@ -79,18 +88,19 @@ export default function Experience() {
                         </svg>
                     </div>
 
-                    <ol className="space-y-14 md:space-y-20">
-                        {content.experience.map((exp) => (
-                            <li key={exp.id} data-exp-entry className="exp-entry is-reached">
+                    <ol className="space-y-10 md:space-y-12">
+                        {content.experience.map((exp, index) => (
+                            <li key={exp.id} data-exp-entry data-side={index % 2 === 0 ? "left" : "right"} className="exp-entry is-reached">
                                 <span aria-hidden className="exp-dot" />
+                                <span aria-hidden className="exp-connector" />
                                 <p className="exp-period text-sm text-text-muted tabular-nums">{exp.period}</p>
-                                <div data-exp-body>
+                                <div data-exp-body className="exp-card panel">
                                     <h3 className="text-h3 font-semibold text-text-primary">{exp.role}</h3>
                                     <p className="mt-1 text-text-secondary">{exp.company}</p>
-                                    <p className="mt-4 max-w-[65ch] leading-relaxed text-text-secondary">{exp.description}</p>
+                                    <p className="mt-4 leading-relaxed text-text-secondary">{exp.description}</p>
                                     <ul className="mt-5 flex flex-wrap gap-2">
                                         {exp.tags.map((tag) => (
-                                            <li key={tag} className="rounded-full bg-bg-card px-3 py-1 text-xs text-text-secondary">
+                                            <li key={tag} className="rounded-full bg-surface px-3 py-1 text-xs text-text-secondary">
                                                 {tag}
                                             </li>
                                         ))}

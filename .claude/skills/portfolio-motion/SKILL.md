@@ -54,6 +54,10 @@ this file wins because the direction is already decided.
   as its end state).
 - Headless Chrome on macOS never advances rAF with `--screenshot`; verify motion through the DevTools protocol
   in real time instead.
+- Local builds can embed a stale content snapshot from `.next/cache/fetch-cache`, which makes the live refresh
+  swap content after load and inflates TBT. Move that cache aside before measuring performance; CI builds fresh.
+- The hero's signal field (`HeroField`) is the page's one ambient loop. It draws the resting grid once to an
+  offscreen canvas and per frame only the lit dots, and does no work while nothing is lit. Keep it that way.
 
 ## Reduced motion and no-JS
 

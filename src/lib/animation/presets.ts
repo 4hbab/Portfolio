@@ -26,5 +26,7 @@ export const ease = {
 export const media = {
     full: "(min-width: 768px) and (prefers-reduced-motion: no-preference)",
     motion: "(prefers-reduced-motion: no-preference)",
+    /** Layout breakpoint (Tailwind md), for effects whose direction depends on layout. */
+    wide: "(min-width: 768px)",
     reduced: "(prefers-reduced-motion: reduce)",
 } as const;

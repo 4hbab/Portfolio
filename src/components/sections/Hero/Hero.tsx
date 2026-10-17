@@ -6,11 +6,13 @@ import { gsap, SplitText, useGSAP } from "@/lib/animation/gsap";
 import { useMagneticCursor } from "@/lib/animation/useMagneticCursor";
 import { duration, ease, media } from "@/lib/animation/presets";
 import { usePortfolio } from "@/components/PortfolioProvider";
+import HeroField, { type HeroFieldHandle } from "./HeroField";
 
 /**
  * The page's one orchestrated load moment: the name rises out of a mask a
- * letter at a time, the details fade up beneath it, and a soft mint glow
- * settles behind the cursor. The animated parts are held back by a CSS gate
+ * letter at a time and, as it lands, sends the first pulse out through the
+ * signal field behind it (HeroField); the details fade up beneath. The
+ * animated parts are held back by a CSS gate
  * only when JS is running and motion is allowed (see `.js [data-hero-name]` in
  * globals.css), so without JS or with reduced motion the hero is simply there.
  */
@@ -18,6 +20,7 @@ export default function Hero() {
     const { content } = usePortfolio();
     const rootRef = useRef<HTMLElement>(null);
     const glowRef = useRef<HTMLDivElement>(null);
+    const fieldRef = useRef<HeroFieldHandle>(null);
     useMagneticCursor(rootRef, { strength: 18, radius: 160 });
 
     useGSAP(
@@ -60,37 +63,13 @@ export default function Hero() {
                 }, 0.55);
 
                 tl.from(glowRef.current, { autoAlpha: 0, scale: 0.8, duration: 1.6, ease: ease.out }, 0);
-            });
 
-            // The glow follows the pointer on desktop; with nothing to follow
-            // it drifts. This is the page's only ambient loop.
-            mm.add(media.full, () => {
-                const glow = glowRef.current;
-                const root = rootRef.current;
-                if (!glow || !root) return;
-
-                const drift = gsap.to(glow, {
-                    xPercent: 8,
-                    yPercent: -6,
-                    duration: 6,
-                    ease: ease.drift,
-                    repeat: -1,
-                    yoyo: true,
-                });
-
-                const toX = gsap.quickTo(glow, "x", { duration: 1.2, ease: ease.out });
-                const toY = gsap.quickTo(glow, "y", { duration: 1.2, ease: ease.out });
-                const onMove = (event: PointerEvent) => {
-                    const rect = root.getBoundingClientRect();
-                    toX(event.clientX - rect.left - rect.width / 2);
-                    toY(event.clientY - rect.top - rect.height / 2);
-                };
-                root.addEventListener("pointermove", onMove);
-
-                return () => {
-                    drift.kill();
-                    root.removeEventListener("pointermove", onMove);
-                };
+                // The name has mostly landed by now; its arrival is the first
+                // signal through the field.
+                tl.call(() => {
+                    const name = rootRef.current?.querySelector("[data-hero-name]");
+                    if (name) fieldRef.current?.pulseFrom(name);
+                }, [], 0.6);
             });
         },
         { scope: rootRef }
@@ -109,6 +88,7 @@ export default function Hero() {
             <div aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center">
                 <div ref={glowRef} className="hero-glow" />
             </div>
+            <HeroField ref={fieldRef} host={rootRef} />
             <div aria-hidden className="hero-grain pointer-events-none absolute inset-0" />
 
             <div className="relative z-10 mx-auto w-full max-w-6xl px-6">
