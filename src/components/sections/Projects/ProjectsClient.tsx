@@ -46,7 +46,7 @@ export default function ProjectsClient({
                     scale: 1,
                     rotation: 0,
                     duration: duration.fast,
-                    ease: ease.back,
+                    ease: ease.out,
                     stagger: 0.08,
                 }
             );
@@ -79,7 +79,7 @@ export default function ProjectsClient({
                         scale: 1,
                         rotation: 0,
                         duration: duration.base,
-                        ease: ease.backGentle,
+                        ease: ease.out,
                         stagger: 0.1,
                     });
                 },
@@ -113,7 +113,7 @@ export default function ProjectsClient({
                         key={tag}
                         onClick={() => handleFilter(tag)}
                         className={`px-4 py-2 text-xs font-medium border transition-all duration-200 ${activeFilter === tag
-                                ? "bg-text-primary text-bg border-border hard-shadow"
+                                ? "bg-text-primary text-bg border-border shadow-raised"
                                 : "bg-bg-card text-text-secondary border-border hover:bg-surface hover:text-text-primary"
                             }`}
                         aria-pressed={activeFilter === tag}
@@ -149,7 +149,7 @@ function ProjectCard({ project }: ProjectCardProps) {
     return (
         <div
             data-card
-            className="group border border-border bg-bg-card overflow-hidden hard-shadow-lg transition-all duration-200"
+            className="group border border-border bg-bg-card overflow-hidden shadow-raised transition-all duration-200"
         >
             {/* Card Header — solid accent color */}
             <div className="h-44 relative overflow-hidden bg-surface border-b border-border">

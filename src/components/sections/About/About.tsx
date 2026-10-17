@@ -58,7 +58,7 @@ export default function About() {
                 rotationX: -15,
                 y: 40,
                 duration: 0.9,
-                ease: ease.snap,
+                ease: ease.reveal,
                 stagger: {
                     amount: 0.3,
                     from: "start",
@@ -199,7 +199,7 @@ export default function About() {
                         />
                         {content.bio.map((entry) => (
                             <div key={entry.id} data-bio className="overflow-hidden perspective">
-                                <div className={`group relative p-6 border border-border hard-shadow hover:border-accent transition-colors duration-300 ${entry.highlighted ? "bg-accent-subtle" : "bg-bg-card"}`}>
+                                <div className={`group relative p-6 border border-border shadow-raised hover:border-accent transition-colors duration-300 ${entry.highlighted ? "bg-accent-subtle" : "bg-bg-card"}`}>
                                     <p className="text-text-secondary text-base md:text-lg leading-relaxed font-medium">
                                         {entry.text}
                                     </p>
@@ -247,7 +247,7 @@ export default function About() {
                                                 <div
                                                     className={`
                                                         px-3 py-2 rounded-md border border-border bg-bg-card text-text-secondary font-mono text-xs
-                                                        hard-shadow transition-all duration-300 relative overflow-hidden
+                                                        shadow-raised transition-all duration-300 relative overflow-hidden
                                                         ${
                                                             hoveredSkill === index
                                                                 ? "border-accent bg-accent-subtle text-text-primary"

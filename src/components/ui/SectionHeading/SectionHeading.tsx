@@ -43,7 +43,7 @@ export default function SectionHeading({
                 x: -40,
                 rotation: -8,
                 duration: 0.6,
-                ease: ease.back,
+                ease: ease.out,
             });
 
             // Title clips in
@@ -52,7 +52,7 @@ export default function SectionHeading({
                 {
                     clipPath: "inset(0 100% 0 0)",
                     duration: 0.8,
-                    ease: ease.snap,
+                    ease: ease.reveal,
                 },
                 "-=0.3"
             );
@@ -63,7 +63,7 @@ export default function SectionHeading({
                 {
                     scaleX: 0,
                     duration: 0.6,
-                    ease: ease.snap,
+                    ease: ease.reveal,
                 },
                 "-=0.4"
             );

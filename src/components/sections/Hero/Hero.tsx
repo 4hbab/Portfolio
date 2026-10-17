@@ -29,7 +29,7 @@ export default function Hero() {
                 scale: 0.5,
                 rotation: -12,
                 duration: 0.6,
-                ease: ease.elastic,
+                ease: ease.out,
             });
 
             // Name characters reveal with clip-path
@@ -43,7 +43,7 @@ export default function Hero() {
                     clipPath: "inset(0 0% 0 0)",
                     opacity: 1,
                     duration: 0.5,
-                    ease: ease.snap,
+                    ease: ease.reveal,
                     stagger: 0.04,
                 },
                 "-=0.2"
@@ -55,7 +55,7 @@ export default function Hero() {
                 opacity: 0,
                 rotation: 4,
                 duration: 0.6,
-                ease: ease.back,
+                ease: ease.out,
                 stagger: 0.06,
             }, "-=0.3");
 
@@ -64,7 +64,7 @@ export default function Hero() {
                 scaleX: 0,
                 opacity: 0,
                 duration: 0.5,
-                ease: ease.back,
+                ease: ease.out,
                 stagger: 0.12,
             }, "-=0.3");
 
@@ -111,7 +111,7 @@ export default function Hero() {
     return (
         <section
             ref={rootRef}
-            className="relative z-0 min-h-screen flex items-center justify-center overflow-hidden bg-bg stripe-bg pt-24"
+            className="relative z-0 min-h-screen flex items-center justify-center overflow-hidden bg-bg pt-24"
         >
             {/* Decorative geometric shapes */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">

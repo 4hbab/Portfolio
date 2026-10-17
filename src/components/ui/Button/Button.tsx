@@ -17,9 +17,9 @@ type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 const variantClasses: Record<Variant, string> = {
     primary:
-        "bg-accent text-accent-fg border border-accent hard-shadow",
+        "bg-accent text-accent-fg border border-accent shadow-raised",
     outline:
-        "bg-transparent text-text-primary border border-border hard-shadow hover:bg-surface",
+        "bg-transparent text-text-primary border border-border shadow-raised hover:bg-surface",
 };
 
 export default function Button(props: ButtonProps) {

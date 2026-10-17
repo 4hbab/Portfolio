@@ -53,7 +53,7 @@ export default function Experience() {
                     opacity: 0,
                     rotation: fromLeft ? -4 : 4,
                     duration: duration.base,
-                    ease: ease.backGentle,
+                    ease: ease.out,
                 });
             });
 
@@ -67,7 +67,7 @@ export default function Experience() {
                 scale: 0,
                 opacity: 0,
                 duration: 0.6,
-                ease: ease.elastic,
+                ease: ease.out,
                 stagger: 0.2,
             });
         },
@@ -99,7 +99,7 @@ export default function Experience() {
                                     className="absolute left-0 md:left-10 top-5 w-2 h-2 -translate-x-[3.5px] rounded-full bg-accent"
                                 />
 
-                                <div className="border border-border bg-bg-card p-6 md:p-8 hard-shadow-lg transition-all duration-200">
+                                <div className="border border-border bg-bg-card p-6 md:p-8 shadow-raised transition-all duration-200">
                                                                         <span className="inline-block font-mono text-xs text-text-muted mb-4">
                                         {exp.period}
                                     </span>

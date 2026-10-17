@@ -34,7 +34,7 @@ export default function Contact() {
                 opacity: 0,
                 rotation: -8,
                 duration: 0.8,
-                ease: ease.back,
+                ease: ease.out,
             });
 
             // "TALK" slides from right
@@ -45,7 +45,7 @@ export default function Contact() {
                     opacity: 0,
                     rotation: 8,
                     duration: 0.8,
-                    ease: ease.back,
+                    ease: ease.out,
                 },
                 "-=0.5"
             );
@@ -57,7 +57,7 @@ export default function Contact() {
                     scale: 0,
                     opacity: 0,
                     duration: 0.6,
-                    ease: ease.elastic,
+                    ease: ease.out,
                 },
                 "-=0.3"
             );
@@ -69,7 +69,7 @@ export default function Contact() {
                     clipPath: "inset(100% 0 0 0)",
                     opacity: 0,
                     duration: 0.7,
-                    ease: ease.snap,
+                    ease: ease.reveal,
                 },
                 "-=0.3"
             );
@@ -82,7 +82,7 @@ export default function Contact() {
                     opacity: 0,
                     rotation: -20,
                     duration: 0.6,
-                    ease: ease.elastic,
+                    ease: ease.out,
                     stagger: 0.08,
                 },
                 "-=0.3"
@@ -100,7 +100,7 @@ export default function Contact() {
     );
 
     return (
-        <section id="contact" ref={rootRef} className="section section-inverted relative overflow-hidden">
+        <section id="contact" ref={rootRef} className="section bg-bg-dark relative overflow-hidden">
             {/* Animated diagonal stripes background */}
             <div
                 data-stripe-bg

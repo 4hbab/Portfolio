@@ -9,7 +9,7 @@ export default function Projects() {
     const allTags = Array.from(new Set(content.projects.flatMap((project) => project.tags))).sort();
 
     return (
-        <section id="projects" className="section bg-bg stripe-bg">
+        <section id="projects" className="section bg-bg">
             <div className="mx-auto max-w-6xl px-6">
                 <SectionHeading
                     title="Projects"

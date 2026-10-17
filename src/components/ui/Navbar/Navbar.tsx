@@ -64,7 +64,7 @@ export default function Navbar() {
                     x: 0,
                     opacity: 1,
                     duration: 0.4,
-                    ease: ease.back,
+                    ease: ease.out,
                     stagger: 0.08,
                 }
             );
