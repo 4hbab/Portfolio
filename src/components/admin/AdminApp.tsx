@@ -239,7 +239,7 @@ function Editor({ fallback, email, onSignOut }: { fallback: PortfolioContent; em
         if (!draft) return null;
         const validated = toDraftState({ content: draft.content, version: draft.version, base_revision: draft.baseRevision, updated_at: draft.updatedAt });
         if ("error" in validated) { setError(validated.error); return null; }
-        setBusy(true); setError("");
+        setBusy(true); setError(""); setRebuildStatus("idle");
         const result = await supabase.rpc("save_portfolio_draft", { next_content: validated.draft.content, expected_version: draft.version });
         setBusy(false);
         if (result.error) { setError(result.error.message); return null; }
@@ -260,7 +260,7 @@ function Editor({ fallback, email, onSignOut }: { fallback: PortfolioContent; em
         // version no longer matches and the database refuses, which is the point.
         let current = draft;
         if (dirty) { const saved = await save(); if (!saved) return; current = saved; }
-        setBusy(true); setError("");
+        setBusy(true); setError(""); setRebuildStatus("idle");
         const result = await supabase.rpc("publish_portfolio", { expected_draft_version: current.version, expected_base_revision: current.baseRevision });
         if (result.error) setError(result.error.message);
         else { const revision = result.data.revision; setRebuildRevision(revision); setMessage(`Revision ${revision} is live.`); await triggerRebuild(revision); await load(); }
