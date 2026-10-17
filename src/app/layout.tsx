@@ -32,7 +32,13 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en" className={`${inter.variable} ${bricolage.variable} ${jetbrainsMono.variable}`}>
+        <html lang="en" className={`${inter.variable} ${bricolage.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+            <head>
+                {/* Runs before first paint so the hero can hold its animated
+                    parts back instead of flashing them before hydration. Without
+                    JS the class never lands and everything simply shows. */}
+                <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
+            </head>
             <body>
                 <a href="#main-content" className="skip-to-content">
                     Skip to content

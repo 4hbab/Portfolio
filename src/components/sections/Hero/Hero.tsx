@@ -9,9 +9,10 @@ import { usePortfolio } from "@/components/PortfolioProvider";
 
 /**
  * The page's one orchestrated load moment: the name rises out of a mask a
- * letter at a time, the tagline follows line by line, and a soft mint glow
- * settles behind the cursor. Everything is rendered visible first and animated
- * *from* hidden, so without JS or with reduced motion the hero is simply there.
+ * letter at a time, the details fade up beneath it, and a soft mint glow
+ * settles behind the cursor. The animated parts are held back by a CSS gate
+ * only when JS is running and motion is allowed (see `.js [data-hero-name]` in
+ * globals.css), so without JS or with reduced motion the hero is simply there.
  */
 export default function Hero() {
     const { content } = usePortfolio();
@@ -35,36 +36,28 @@ export default function Hero() {
                     autoSplit: true,
                     onSplit(self) {
                         self.chars.forEach((char) => char.setAttribute("data-magnetic", ""));
-                        return tl.from(self.chars, {
+                        const reveal = tl.from(self.chars, {
                             yPercent: 110,
                             duration: duration.slow,
                             ease: ease.reveal,
                             stagger: 0.035,
                         }, 0);
+                        // The chars are now masked out of sight, so the CSS
+                        // gate holding the heading back can be lifted.
+                        gsap.set(self.elements, { visibility: "visible" });
+                        return reveal;
                     },
                 });
 
-                SplitText.create("[data-hero-tagline]", {
-                    type: "lines",
-                    mask: "lines",
-                    autoSplit: true,
-                    onSplit(self) {
-                        return tl.from(self.lines, {
-                            yPercent: 100,
-                            duration: duration.base,
-                            ease: ease.reveal,
-                            stagger: 0.08,
-                        }, 0.45);
-                    },
-                });
-
-                tl.from("[data-hero-fade]", {
-                    autoAlpha: 0,
-                    y: 12,
+                // fromTo, not from: the CSS gate means these start hidden, and
+                // from() would record "hidden" as the state to animate back to.
+                tl.fromTo("[data-hero-fade]", { autoAlpha: 0, y: 12 }, {
+                    autoAlpha: 1,
+                    y: 0,
                     duration: duration.base,
                     ease: ease.out,
                     stagger: 0.08,
-                }, 0.7);
+                }, 0.55);
 
                 tl.from(glowRef.current, { autoAlpha: 0, scale: 0.8, duration: 1.6, ease: ease.out }, 0);
             });
@@ -139,9 +132,9 @@ export default function Hero() {
                     {content.profile.name}
                 </h1>
 
+                {/* Not animated: on phones this is the LCP element, and hiding it
+                    until JS runs cost seconds of LCP on a throttled device. */}
                 <p
-                    key={content.profile.tagline}
-                    data-hero-tagline
                     className="mt-8 max-w-2xl text-lg sm:text-xl leading-relaxed text-text-secondary"
                 >
                     {content.profile.tagline}

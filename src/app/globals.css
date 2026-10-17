@@ -25,7 +25,7 @@
   /* Ink: muted mint, stepping down to a cool grey-green for support text. */
   --color-text-primary: #C5E4D7;
   --color-text-secondary: #8FAEA3;
-  --color-text-muted: #6B8479;
+  --color-text-muted: #7A9388;
   /* The page is dark throughout, so "inverse" now means the same mint ink
      sitting on the deeper band rather than a light-on-dark flip. */
   --color-text-inverse: #C5E4D7;
@@ -281,6 +281,24 @@ p {
   display: inline-block;
 }
 
+/* Hydration happens after the server HTML has painted, so without this the
+   name would show, vanish when GSAP sets its start state, then animate in.
+   The hero reveals these itself; the 4s fallback covers JS that never runs.
+   The tagline is deliberately not gated: on phones it is the LCP element. */
+@media (prefers-reduced-motion: no-preference) {
+  .js [data-hero-name],
+  .js [data-hero-fade] {
+    visibility: hidden;
+    animation: hero-gate 0s 4s forwards;
+  }
+}
+
+@keyframes hero-gate {
+  to {
+    visibility: visible;
+  }
+}
+
 .hero-glow {
   width: min(70vw, 760px);
   aspect-ratio: 1;
@@ -454,20 +472,9 @@ p {
 
 /* ── FAB entrance animation ── */
 @keyframes chatbot-fab-enter {
-  0% {
-    transform: scale(0) rotate(-180deg);
+  from {
+    transform: translateY(12px) scale(0.9);
     opacity: 0;
-  }
-  60% {
-    transform: scale(1.15) rotate(10deg);
-    opacity: 1;
-  }
-  80% {
-    transform: scale(0.95) rotate(-5deg);
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
-    opacity: 1;
   }
 }
 
@@ -488,7 +495,7 @@ p {
   border-radius: 9999px;
   box-shadow: 0 4px 16px -2px rgb(0 0 0 / 0.5);
   cursor: pointer;
-  animation: chatbot-fab-enter 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 1s both;
+  animation: chatbot-fab-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) 1.6s both;
 }
 
 .chatbot-fab:hover {
@@ -509,13 +516,9 @@ p {
 
 /* ── Panel entrance animation ── */
 @keyframes chatbot-panel-enter {
-  0% {
+  from {
     opacity: 0;
-    transform: scale(0.85) translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(0.96) translateY(8px);
   }
 }
 
@@ -531,10 +534,11 @@ p {
   flex-direction: column;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  border-radius: 0.875rem;
+  box-shadow: var(--shadow-overlay);
   overflow: hidden;
   transform-origin: bottom right;
-  animation: chatbot-panel-enter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: chatbot-panel-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .chatbot-panel--open {
@@ -894,5 +898,17 @@ p {
     right: 1rem;
     width: 52px;
     height: 52px;
+  }
+}
+
+/* Last in the file so it outranks every chatbot animation above it. The FAB
+   arrives after the hero sequence (1.6s); with reduced motion nothing in the
+   chatbot moves. */
+@media (prefers-reduced-motion: reduce) {
+  .chatbot-fab,
+  .chatbot-panel,
+  .chatbot-header-dot,
+  .chatbot-typing span {
+    animation: none;
   }
 }
