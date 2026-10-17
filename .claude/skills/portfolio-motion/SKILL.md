@@ -35,6 +35,26 @@ this file wins because the direction is already decided.
 - Cursor-driven effects (magnetic, spotlight) write CSS custom properties or use `gsap.quickTo`; never
   create a new tween per mousemove.
 
+## Gotchas this codebase has already hit
+
+- Import everything from `@/lib/animation/gsap` (it imports from `gsap/all`; `gsap/Flip` breaks `tsc` on macOS
+  because of a casing clash between `Flip.d.ts` and `flip.d.ts`).
+- `useGSAP` with `dependencies` does **not** revert on change unless `revertOnUpdate: true`. Content arrives twice
+  (build snapshot, then the live fetch), so any effect keyed on content needs it, or `from()` tweens stack and
+  animate hidden to hidden.
+- Anything that changes page height after load (filtering, expanding) must call `ScrollTrigger.refresh()`, or
+  every trigger below it fires at stale positions.
+- Flip cannot animate out an element hidden by the `hidden` attribute: Tailwind's base styles make `[hidden]`
+  `display: none !important`. Hide with a data attribute and a plain CSS rule instead.
+- Elements that swap per state (the nav pill) need a shared `data-flip-id` for Flip to match old to new.
+- SplitText: `aria: "none"` for line splits (`aria-label` is not allowed on `<p>`); char splits on headings keep
+  the default. Create splits lazily near the viewport (see `useLineReveal`), not all during hydration.
+- Never animate the mobile LCP element (the hero tagline). Above-the-fold elements that are animated are held
+  back by the `.js` gate in `globals.css`, and must use `fromTo` (a `from()` would record the gated hidden state
+  as its end state).
+- Headless Chrome on macOS never advances rAF with `--screenshot`; verify motion through the DevTools protocol
+  in real time instead.
+
 ## Reduced motion and no-JS
 
 - Content must be fully visible with JS disabled and with `prefers-reduced-motion: reduce`. Animate **from**
