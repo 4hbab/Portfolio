@@ -1,123 +1,24 @@
 "use client";
 
 import { useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
-import { useReducedMotion } from "@/lib/animation/reducedMotion";
-import { ease } from "@/lib/animation/presets";
-
-gsap.registerPlugin(useGSAP, ScrollTrigger);
+import { useLineReveal } from "@/lib/animation/useLineReveal";
 
 interface SectionHeadingProps {
     title: string;
     subtitle?: string;
-    align?: "left" | "center";
-    accent?: string;
 }
 
-export default function SectionHeading({
-    title,
-    subtitle,
-    align = "center",
-    accent,
-}: SectionHeadingProps) {
+export default function SectionHeading({ title, subtitle }: SectionHeadingProps) {
     const ref = useRef<HTMLDivElement>(null);
-    const reducedMotion = useReducedMotion();
-
-    useGSAP(
-        () => {
-            if (reducedMotion) return;
-
-            const tl = gsap.timeline({
-                scrollTrigger: {
-                    trigger: ref.current,
-                    start: "top 85%",
-                    once: true,
-                },
-            });
-
-            // Label slides in with rotation
-            tl.from("[data-heading-label]", {
-                opacity: 0,
-                x: -40,
-                rotation: -8,
-                duration: 0.6,
-                ease: ease.out,
-            });
-
-            // Title clips in
-            tl.from(
-                "[data-heading-title]",
-                {
-                    clipPath: "inset(0 100% 0 0)",
-                    duration: 0.8,
-                    ease: ease.reveal,
-                },
-                "-=0.3"
-            );
-
-            // Underline draws
-            tl.from(
-                "[data-heading-line]",
-                {
-                    scaleX: 0,
-                    duration: 0.6,
-                    ease: ease.reveal,
-                },
-                "-=0.4"
-            );
-
-            // Subtitle fades
-            if (subtitle) {
-                tl.from(
-                    "[data-heading-sub]",
-                    {
-                        opacity: 0,
-                        y: 20,
-                        duration: 0.5,
-                        ease: ease.out,
-                    },
-                    "-=0.2"
-                );
-            }
-        },
-        { scope: ref, dependencies: [reducedMotion, subtitle] }
-    );
+    useLineReveal(ref);
 
     return (
-        <div
-            ref={ref}
-            className={`mb-16 md:mb-20 ${align === "center" ? "text-center" : "text-left"} relative`}
-        >
-            {/* Rotated accent label */}
-            <span
-                data-heading-label
-                className="inline-block font-mono text-xs uppercase tracking-[0.08em] text-text-muted mb-3"
-                style={{ background: accent }}
-            >
-                {title}
-            </span>
-
-            {/* Giant title */}
-            <h2
-                data-heading-title
-                className="font-display text-2xl md:text-3xl font-semibold text-text-primary leading-tight tracking-tight"
-            >
+        <div ref={ref} className="mb-14 md:mb-20 max-w-3xl">
+            <h2 key={title} data-reveal-lines className="text-h2 font-semibold text-text-primary">
                 {title}
             </h2>
-
-            {/* Thick underline */}
-            <div
-                data-heading-line
-                className={`h-px bg-border mt-5 origin-left ${align === "center" ? "mx-auto w-16" : "w-12"}`}
-            />
-
             {subtitle && (
-                <p
-                    data-heading-sub
-                    className={`text-text-secondary text-base md:text-lg mt-6 font-medium max-w-2xl ${align === "center" ? "mx-auto" : ""}`}
-                >
+                <p key={subtitle} data-reveal-lines className="mt-5 text-lg text-text-secondary">
                     {subtitle}
                 </p>
             )}

@@ -134,7 +134,7 @@ export default function Hero() {
                 <h1
                     key={content.profile.name}
                     data-hero-name
-                    className="hero-name font-display text-display font-semibold text-text-primary"
+                    className="type-narrow text-display text-text-primary"
                 >
                     {content.profile.name}
                 </h1>

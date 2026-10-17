@@ -1,134 +1,104 @@
 "use client";
 
 import { useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
 import SectionHeading from "@/components/ui/SectionHeading/SectionHeading";
 import { usePortfolio } from "@/components/PortfolioProvider";
-import { useReducedMotion } from "@/lib/animation/reducedMotion";
-import { ease, duration } from "@/lib/animation/presets";
+import { gsap, ScrollTrigger, useGSAP } from "@/lib/animation/gsap";
+import { duration, ease, media } from "@/lib/animation/presets";
 
-gsap.registerPlugin(useGSAP, ScrollTrigger);
+/* Where the line sits and where the scrub reads it: an entry counts as reached
+   when its top crosses this fraction of the viewport, the same line the fill's
+   leading edge is at, so a dot lights exactly as the line arrives. */
+const READ_LINE = "top 65%";
 
+/**
+ * One of the page's three bold moments. The rail is drawn with DrawSVG,
+ * scrubbed to scroll, and each entry lights its dot as the line reaches it.
+ * At rest (no JS, reduced motion) the line is fully drawn and every dot lit.
+ */
 export default function Experience() {
     const { content } = usePortfolio();
     const rootRef = useRef<HTMLElement>(null);
-    const lineRef = useRef<HTMLDivElement>(null);
-    const reducedMotion = useReducedMotion();
+    const railRef = useRef<HTMLDivElement>(null);
 
     useGSAP(
         () => {
-            if (reducedMotion) return;
-
-            // Timeline line draws down as user scrolls
-            if (lineRef.current) {
+            const mm = gsap.matchMedia();
+            mm.add(media.motion, () => {
                 gsap.fromTo(
-                    lineRef.current,
-                    { scaleY: 0 },
+                    "[data-rail-fill]",
+                    { drawSVG: "0%" },
                     {
-                        scaleY: 1,
+                        drawSVG: "100%",
                         ease: "none",
-                        scrollTrigger: {
-                            trigger: rootRef.current,
-                            start: "top 60%",
-                            end: "bottom 80%",
-                            scrub: 1,
-                        },
+                        scrollTrigger: { trigger: railRef.current, start: READ_LINE, end: "bottom 65%", scrub: 0.6 },
                     }
                 );
-            }
 
-            // Cards slide in from alternating sides with rotation
-            const cards = gsap.utils.toArray<HTMLElement>("[data-exp-card]");
-            cards.forEach((card, i) => {
-                const fromLeft = i % 2 === 0;
-                gsap.from(card, {
-                    scrollTrigger: {
-                        trigger: card,
-                        start: "top 80%",
-                        once: true,
-                    },
-                    x: fromLeft ? -100 : 100,
-                    opacity: 0,
-                    rotation: fromLeft ? -4 : 4,
-                    duration: duration.base,
-                    ease: ease.out,
+                gsap.utils.toArray<HTMLElement>("[data-exp-entry]").forEach((entry) => {
+                    entry.classList.remove("is-reached");
+                    ScrollTrigger.create({
+                        trigger: entry,
+                        start: READ_LINE,
+                        toggleClass: { targets: entry, className: "is-reached" },
+                    });
+                    gsap.from(entry.querySelector("[data-exp-body]"), {
+                        autoAlpha: 0,
+                        y: 24,
+                        duration: duration.base,
+                        ease: ease.out,
+                        scrollTrigger: { trigger: entry, start: "top 85%", once: true },
+                    });
                 });
-            });
 
-            // Timeline dots pulse in
-            gsap.from("[data-exp-dot]", {
-                scrollTrigger: {
-                    trigger: rootRef.current,
-                    start: "top 70%",
-                    once: true,
-                },
-                scale: 0,
-                opacity: 0,
-                duration: 0.6,
-                ease: ease.out,
-                stagger: 0.2,
+                // matchMedia reverts tweens on teardown but not class changes.
+                return () => {
+                    rootRef.current?.querySelectorAll("[data-exp-entry]").forEach((entry) => entry.classList.add("is-reached"));
+                };
             });
         },
-        { scope: rootRef, dependencies: [reducedMotion] }
+        // Content arrives twice (build snapshot, then the live fetch). Without
+        // revertOnUpdate the second run's from() tweens read the first run's
+        // hidden state as their end state and animate hidden to hidden.
+        { scope: rootRef, dependencies: [content.experience], revertOnUpdate: true }
     );
 
     return (
         <section id="experience" ref={rootRef} className="section bg-surface">
-            <div className="mx-auto max-w-4xl px-6">
-                <SectionHeading
-                    title="Experience"
-                    subtitle="Where I've worked and what I've built."
-                    accent="var(--color-surface)"
-                />
+            <div className="mx-auto max-w-6xl px-6">
+                <SectionHeading title="Experience" subtitle="Where I've worked and what I've built." />
 
                 <div className="relative">
-                    {/* Timeline line — draws on scroll */}
-                    <div
-                        ref={lineRef}
-                        className="absolute left-0 md:left-10 top-0 bottom-0 w-px bg-border origin-top"
-                    />
-
-                    <div className="space-y-10">
-                        {content.experience.map((exp) => (
-                            <div key={exp.id} data-exp-card className="relative pl-10 md:pl-24">
-                                {/* Timeline dot — square brutalist */}
-                                <div
-                                    data-exp-dot
-                                    className="absolute left-0 md:left-10 top-5 w-2 h-2 -translate-x-[3.5px] rounded-full bg-accent"
-                                />
-
-                                <div className="border border-border bg-bg-card p-6 md:p-8 shadow-raised transition-all duration-200">
-                                                                        <span className="inline-block font-mono text-xs text-text-muted mb-4">
-                                        {exp.period}
-                                    </span>
-
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                                        <h3 className="font-display text-lg md:text-xl font-semibold text-text-primary tracking-tight">
-                                            {exp.role}
-                                        </h3>
-                                    </div>
-                                    <p className="text-text-secondary text-sm mb-4">
-                                        {exp.company}
-                                    </p>
-                                    <p className="text-text-secondary text-base leading-relaxed mb-4">
-                                        {exp.description}
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {exp.tags.map((tag) => (
-                                            <span
-                                                key={tag}
-                                                className="px-2.5 py-1 rounded-md bg-surface text-text-secondary font-mono text-xs"
-                                            >
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                    <div ref={railRef} aria-hidden className="exp-rail">
+                        {/* Stretched to the rail's height with a non-scaling stroke,
+                            so the line is in the markup with no measuring and
+                            DrawSVG still works in screen pixels. */}
+                        <svg width="2" height="100%" viewBox="0 0 2 100" preserveAspectRatio="none" className="block overflow-visible">
+                            <line x1="1" y1="0" x2="1" y2="100" vectorEffect="non-scaling-stroke" className="exp-rail-track" />
+                            <line data-rail-fill x1="1" y1="0" x2="1" y2="100" vectorEffect="non-scaling-stroke" className="exp-rail-fill" />
+                        </svg>
                     </div>
+
+                    <ol className="space-y-14 md:space-y-20">
+                        {content.experience.map((exp) => (
+                            <li key={exp.id} data-exp-entry className="exp-entry is-reached">
+                                <span aria-hidden className="exp-dot" />
+                                <p className="exp-period text-sm text-text-muted tabular-nums">{exp.period}</p>
+                                <div data-exp-body>
+                                    <h3 className="text-h3 font-semibold text-text-primary">{exp.role}</h3>
+                                    <p className="mt-1 text-text-secondary">{exp.company}</p>
+                                    <p className="mt-4 max-w-[65ch] leading-relaxed text-text-secondary">{exp.description}</p>
+                                    <ul className="mt-5 flex flex-wrap gap-2">
+                                        {exp.tags.map((tag) => (
+                                            <li key={tag} className="rounded-full bg-bg-card px-3 py-1 text-xs text-text-secondary">
+                                                {tag}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </li>
+                        ))}
+                    </ol>
                 </div>
             </div>
         </section>
