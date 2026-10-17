@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 // Variable on weight, width and optical size: headings get the display cut at
-// large sizes, and the width axis is what the hero's hover response animates.
+// large sizes, and the hero sets the name in a narrower width.
 const bricolage = Bricolage_Grotesque({
     subsets: ["latin"],
     variable: "--font-bricolage",
