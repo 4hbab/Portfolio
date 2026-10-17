@@ -36,6 +36,33 @@ row, so neither needs a key that bypasses RLS at all.
 
 The GitHub token should be fine-grained, restricted to `4hbab/Portfolio`, with Actions write access only. The admin interface never receives it. Configure password recovery redirects to `/Portfolio/admin/`; keep recovery access to the owner email account and Supabase dashboard protected with MFA.
 
+## Studio session limits
+
+A studio session ends after **30 minutes without activity** or **8 hours after
+the password sign-in**, whichever comes first. A dialog warns two minutes
+before; for the idle limit, unsaved edits are saved before signing out.
+
+The free plan has no server-side session time-box or inactivity timeout, so the
+limits are layered:
+
+- **Access-token lifetime: 15 minutes.** Set it in the dashboard under
+  **Project Settings → JWT Keys → Access token expiry** (`900`); `jwt_expiry` in
+  `supabase/config.toml` only covers the local stack. A short lifetime bounds
+  how long a leaked access token stays usable.
+- **Idle limit**: enforced by the studio in the browser
+  (`src/lib/supabase/useSessionTimeout.ts`). Activity is shared across open
+  tabs. Returning to a tab does not count as activity.
+- **8-hour limit**: enforced in the browser, by `requireOwnerMfa` in the edge
+  functions, and by `public.is_owner_with_mfa()` in the database. It is
+  measured from the earliest `amr` timestamp in the token, which refreshes keep.
+  This is what stops a stolen refresh token from writing indefinitely.
+
+Timeouts sign out with `scope: "local"`, which revokes this session's refresh
+token on the server but leaves other devices signed in. To change a limit,
+update `SESSION_POLICY` in `src/lib/supabase/session.ts`,
+`SESSION_LIMIT_SECONDS` in `supabase/functions/_shared/session.ts`, and the
+interval in the latest `is_owner_with_mfa` migration together.
+
 ## Export and restore
 
 Export the current live snapshot before large edits:
@@ -65,10 +92,11 @@ Three layers gate an owner write, and each is independently sufficient to refuse
 
 1. `verify_jwt = true` in `supabase/config.toml` rejects an unauthenticated call
    at the edge, before any function code runs.
-2. `requireOwnerMfa` verifies the token with Supabase Auth, requires `aal2`, and
-   confirms the caller is in `owner_accounts`.
+2. `requireOwnerMfa` verifies the token with Supabase Auth, requires `aal2` and
+   a session younger than 8 hours, and confirms the caller is in `owner_accounts`.
 3. Every write is a `SECURITY DEFINER` function that re-checks
-   `public.is_owner_with_mfa()` and validates the content. The database refuses
+   `public.is_owner_with_mfa()` (owner, `aal2`, session under 8 hours) and
+   validates the content. The database refuses
    a write even if both layers above were bypassed.
 
 `recruiter-chat` is deliberately public (`verify_jwt = false`): it answers

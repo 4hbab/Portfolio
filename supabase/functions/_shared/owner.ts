@@ -1,25 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { json } from "./http.ts";
 import { requireSecret } from "./config.ts";
-
-/**
- * Reads the assurance level from the access token. The token has already been
- * verified by `auth.getUser()` above the call, and the database re-checks
- * `auth.jwt() ->> 'aal'` inside every write function, so this is the middle of
- * three layers rather than the only one.
- */
-function assuranceLevel(authorization: string): string | null {
-  try {
-    const encodedPayload = authorization.replace(/^Bearer\s+/i, "").split(".")[1];
-    if (!encodedPayload) return null;
-    const base64 = encodedPayload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(encodedPayload.length / 4) * 4, "=");
-    const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
-    return JSON.parse(new TextDecoder().decode(bytes)).aal ?? null;
-  } catch {
-    // A token this malformed is an authentication failure, not a server fault.
-    return null;
-  }
-}
+import { sessionExpired, tokenClaims } from "./session.ts";
 
 export async function requireOwnerMfa(request: Request) {
   const url = requireSecret("SUPABASE_URL");
@@ -29,7 +11,12 @@ export async function requireOwnerMfa(request: Request) {
   const userClient = createClient(url, anonKey, { global: { headers: { Authorization: authorization } } });
   const { data: { user }, error } = await userClient.auth.getUser();
   if (error || !user) throw new Error("UNAUTHORIZED");
-  if (assuranceLevel(authorization) !== "aal2") throw new Error("MFA_REQUIRED");
+  // getUser() above has verified the token, and the database re-checks both the
+  // assurance level and the session age inside every write function, so these
+  // are the middle of three layers rather than the only one.
+  const claims = tokenClaims(authorization);
+  if (sessionExpired(claims)) throw new Error("UNAUTHORIZED");
+  if (claims.aal !== "aal2") throw new Error("MFA_REQUIRED");
 
   // Checked as the caller, not with the service-role key: the "Owner can
   // identify their account" policy already scopes this read to their own row,

@@ -5,6 +5,8 @@ import type { Session } from "@supabase/supabase-js";
 import Image from "next/image";
 import { getSupabaseBrowserClient, getSupabaseConfigError } from "@/lib/supabase/browser";
 import { normalizeTotpQrCode } from "@/lib/supabase/mfa";
+import { authenticatedAt, SESSION_EXPIRED_CODE, type ExpiryReason, type SessionState } from "@/lib/supabase/session";
+import { useSessionTimeout } from "@/lib/supabase/useSessionTimeout";
 import { portfolioContentSchema, type PortfolioContent } from "@/content/portfolio";
 import { publicPath } from "@/lib/site";
 
@@ -79,6 +81,15 @@ function AdminSession({ fallback }: { fallback: PortfolioContent }) {
     const [session, setSession] = useState<Session | null>(null);
     const [aal2, setAal2] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [notice, setNotice] = useState("");
+    const startedAt = useMemo(() => (session ? authenticatedAt(session.access_token) : null), [session]);
+
+    // scope "local" revokes this session's refresh token on the server, so the
+    // timeout is real, without signing the owner out on their other devices.
+    const expire = useCallback(async (reason: ExpiryReason) => {
+        setNotice(SIGNED_OUT_NOTICE[reason]);
+        await supabase.auth.signOut({ scope: "local" });
+    }, [supabase]);
 
     const checkAuth = useCallback(async () => {
         const { data: { session: next } } = await supabase.auth.getSession();
@@ -103,9 +114,34 @@ function AdminSession({ fallback }: { fallback: PortfolioContent }) {
     }, [checkAuth, supabase]);
 
     if (loading) return <AdminFrame><p>Checking your session…</p></AdminFrame>;
-    if (!session) return <AdminFrame><Login onComplete={checkAuth} /></AdminFrame>;
+    if (!session) return <AdminFrame>{notice && <p className="admin-notice" role="status">{notice}</p>}<Login onComplete={async () => { setNotice(""); await checkAuth(); }} /></AdminFrame>;
     if (!aal2) return <AdminFrame><MfaGate onComplete={checkAuth} /></AdminFrame>;
-    return <Editor fallback={fallback} email={session.user.email ?? "Owner"} onSignOut={() => supabase.auth.signOut()} />;
+    return <Editor fallback={fallback} email={session.user.email ?? "Owner"} startedAt={startedAt} onExpire={expire} onSignOut={() => supabase.auth.signOut()} />;
+}
+
+const SIGNED_OUT_NOTICE: Record<ExpiryReason, string> = {
+    idle: "You were signed out after 30 minutes without activity.",
+    absolute: "Your session has ended. Sign in again to continue.",
+};
+
+/** A database refusal past the 8-hour limit, or an edge function rejecting the token. */
+function sessionEnded(failure: { code?: string; context?: unknown }) {
+    return failure.code === SESSION_EXPIRED_CODE || (failure.context instanceof Response && failure.context.status === 401);
+}
+
+function SessionWarning({ state, onStay, onSave, busy, dirty }: { state: SessionState; onStay: () => void; onSave: () => void; busy: boolean; dirty: boolean }) {
+    if (state.kind !== "warning") return null;
+    const seconds = Math.ceil(state.remainingMs / 1000);
+    const countdown = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+    return <div className="admin-modal" role="alertdialog" aria-modal="true" aria-labelledby="session-warning-title"><div className="admin-modal-card max-w-md">
+        <h2 id="session-warning-title" className="font-display text-xl font-semibold mb-2">{state.reason === "idle" ? "Still there?" : "Session ending"}</h2>
+        <p className="text-sm text-text-secondary mb-5">{state.reason === "idle"
+            ? <>You&apos;ll be signed out in <strong className="text-text-primary">{countdown}</strong> for inactivity.{dirty ? " Unsaved changes will be saved first." : ""}</>
+            : <>Sessions last 8 hours. You&apos;ll be signed out in <strong className="text-text-primary">{countdown}</strong>.{dirty ? " Save your draft now; unsaved changes cannot be kept after that." : ""}</>}</p>
+        <div className="flex gap-2">{state.reason === "idle"
+            ? <button className="admin-primary" onClick={onStay} autoFocus>Stay signed in</button>
+            : <button className="admin-primary" onClick={onSave} disabled={busy || !dirty} autoFocus>Save draft</button>}</div>
+    </div></div>;
 }
 
 function AdminFrame({ children }: { children: React.ReactNode }) {
@@ -217,7 +253,7 @@ function MfaGate({ onComplete }: { onComplete: () => Promise<void> }) {
     </form>;
 }
 
-function Editor({ fallback, email, onSignOut }: { fallback: PortfolioContent; email: string; onSignOut: () => Promise<unknown> }) {
+function Editor({ fallback, email, startedAt, onExpire, onSignOut }: { fallback: PortfolioContent; email: string; startedAt: number | null; onExpire: (reason: ExpiryReason) => Promise<void>; onSignOut: () => Promise<unknown> }) {
     const supabase = useMemo(() => getSupabaseBrowserClient(), []);
     const [draft, setDraft] = useState<DraftState | null>(null); const [section, setSection] = useState<SectionKey>("profile"); const [dirty, setDirty] = useState(false); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [revisions, setRevisions] = useState<Revision[]>([]); const [preview, setPreview] = useState<"website" | "pdf" | null>(null); const [pdfUrl, setPdfUrl] = useState(""); const [rebuildRevision, setRebuildRevision] = useState<number | null>(null); const [rebuildStatus, setRebuildStatus] = useState<"idle" | "queued" | "failed">("idle");
 
@@ -233,6 +269,7 @@ function Editor({ fallback, email, onSignOut }: { fallback: PortfolioContent; em
     useEffect(() => { void load(); }, [load]);
     useEffect(() => { const warn = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); }; window.addEventListener("beforeunload", warn); return () => window.removeEventListener("beforeunload", warn); }, [dirty]);
     useEffect(() => () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); }, [pdfUrl]);
+    const fail = (failure: { message: string; code?: string; context?: unknown }) => { if (sessionEnded(failure)) void onExpire("absolute"); else setError(failure.message); };
 
     const setContent = (content: PortfolioContent) => { setDraft((current) => current ? { ...current, content } : current); setDirty(true); setMessage(""); };
     const save = async (): Promise<DraftState | null> => {
@@ -242,7 +279,7 @@ function Editor({ fallback, email, onSignOut }: { fallback: PortfolioContent; em
         setBusy(true); setError(""); setRebuildStatus("idle");
         const result = await supabase.rpc("save_portfolio_draft", { next_content: validated.draft.content, expected_version: draft.version });
         setBusy(false);
-        if (result.error) { setError(result.error.message); return null; }
+        if (result.error) { fail(result.error); return null; }
         const saved = toDraftState(result.data);
         if ("error" in saved) { setError(saved.error); return null; }
         setDraft(saved.draft);
@@ -251,6 +288,7 @@ function Editor({ fallback, email, onSignOut }: { fallback: PortfolioContent; em
     const triggerRebuild = async (revision: number) => {
         setRebuildStatus("idle");
         const result = await supabase.functions.invoke("trigger-rebuild", { body: { revision } });
+        if (result.error && sessionEnded(result.error)) { void onExpire("absolute"); return; }
         setRebuildStatus(result.error ? "failed" : "queued");
         if (result.error) setError("Content is live, but the static rebuild could not be queued. Retry it below.");
     };
@@ -262,12 +300,21 @@ function Editor({ fallback, email, onSignOut }: { fallback: PortfolioContent; em
         if (dirty) { const saved = await save(); if (!saved) return; current = saved; }
         setBusy(true); setError(""); setRebuildStatus("idle");
         const result = await supabase.rpc("publish_portfolio", { expected_draft_version: current.version, expected_base_revision: current.baseRevision });
-        if (result.error) setError(result.error.message);
+        if (result.error) fail(result.error);
         else { const revision = result.data.revision; setRebuildRevision(revision); setMessage(`Revision ${revision} is live.`); await triggerRebuild(revision); await load(); }
         setBusy(false);
     };
     const previewPdf = async () => { if (!draft) return; setBusy(true); const { createResumeBlob } = await import("@/components/resume/generateResume"); const blob = await createResumeBlob(draft.content); if (pdfUrl) URL.revokeObjectURL(pdfUrl); setPdfUrl(URL.createObjectURL(blob)); setPreview("pdf"); setBusy(false); };
-    const importGitHub = async () => { if (!draft) return; setBusy(true); setError(""); const result = await supabase.functions.invoke("import-github-projects", { body: { content: draft.content, expectedVersion: draft.version } }); if (result.error) setError(result.error.message); else { const next = toDraftState(result.data); if ("error" in next) { setError(next.error); setBusy(false); return; } setDraft(next.draft); const { importedCount, droppedCount, projectLimit } = result.data; setMessage(`Imported ${importedCount} GitHub ${importedCount === 1 ? "project" : "projects"} into the draft for review.${droppedCount > 0 ? ` ${droppedCount} did not fit the ${projectLimit}-project limit and were left out.` : ""}`); setDirty(false); } setBusy(false); };
+    const importGitHub = async () => { if (!draft) return; setBusy(true); setError(""); const result = await supabase.functions.invoke("import-github-projects", { body: { content: draft.content, expectedVersion: draft.version } }); if (result.error) fail(result.error); else { const next = toDraftState(result.data); if ("error" in next) { setError(next.error); setBusy(false); return; } setDraft(next.draft); const { importedCount, droppedCount, projectLimit } = result.data; setMessage(`Imported ${importedCount} GitHub ${importedCount === 1 ? "project" : "projects"} into the draft for review.${droppedCount > 0 ? ` ${droppedCount} did not fit the ${projectLimit}-project limit and were left out.` : ""}`); setDirty(false); } setBusy(false); };
+
+    // Idle expiry leaves the token valid, so unsaved edits are stored first. Past
+    // the 8-hour limit the database refuses the save, which is what the
+    // two-minute warning is there to prevent.
+    const latest = useRef({ dirty, save });
+    useEffect(() => { latest.current = { dirty, save }; });
+    const { state: sessionState, stayActive } = useSessionTimeout(startedAt, (reason) => {
+        void (async () => { if (reason === "idle" && latest.current.dirty) await latest.current.save(); await onExpire(reason); })();
+    });
 
     if (!draft) return <AdminFrame>{error ? <p className="admin-error">{error}</p> : <p>Loading editor…</p>}</AdminFrame>;
     return <main className="min-h-screen bg-surface text-text-primary">
@@ -277,8 +324,9 @@ function Editor({ fallback, email, onSignOut }: { fallback: PortfolioContent; em
             {message && <p className="admin-success">{message}{rebuildStatus === "queued" ? " Static rebuild queued." : ""}</p>}{error && <p className="admin-error">{error}{rebuildStatus === "failed" && rebuildRevision && <button className="admin-link ml-3" onClick={() => void triggerRebuild(rebuildRevision)}>Retry rebuild</button>}</p>}
             {section === "profile" && <ProfileEditor value={draft.content} onChange={setContent} />}
             {section !== "profile" && section !== "revisions" && <ListEditor section={section} content={draft.content} onChange={setContent} />}
-            {section === "revisions" && <RevisionHistory revisions={revisions} onRestore={async (revision) => { setBusy(true); const result = await supabase.rpc("restore_portfolio_revision", { target_revision: revision, expected_version: draft.version }); if (result.error) setError(result.error.message); else { const next = toDraftState(result.data); if ("error" in next) setError(next.error); else { setDraft(next.draft); setMessage(`Revision ${revision} restored as a draft.`); setDirty(false); } } setBusy(false); }} />}
+            {section === "revisions" && <RevisionHistory revisions={revisions} onRestore={async (revision) => { setBusy(true); const result = await supabase.rpc("restore_portfolio_revision", { target_revision: revision, expected_version: draft.version }); if (result.error) fail(result.error); else { const next = toDraftState(result.data); if ("error" in next) setError(next.error); else { setDraft(next.draft); setMessage(`Revision ${revision} restored as a draft.`); setDirty(false); } } setBusy(false); }} />}
         </section></div>
+        <SessionWarning state={sessionState} onStay={stayActive} onSave={() => void save()} busy={busy} dirty={dirty} />
         {preview && <div className="admin-modal" role="dialog" aria-modal="true"><div className="admin-modal-card"><button className="admin-modal-close" onClick={() => setPreview(null)}>Close</button>{preview === "pdf" && pdfUrl ? <iframe src={pdfUrl} title="Draft resume preview" className="w-full h-[75vh]" /> : <WebsitePreview content={draft.content} />}</div></div>}
     </main>;
 }

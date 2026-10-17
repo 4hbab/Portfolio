@@ -2,6 +2,8 @@ project_id = "portfolio"
 
 [auth]
 enable_signup = false
+# Local stack only; set the hosted value in the dashboard (docs/content-operations.md).
+jwt_expiry = 900
 
 [functions.recruiter-chat]
 verify_jwt = false
