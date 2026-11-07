@@ -1,223 +1,142 @@
 "use client";
 
 import { useRef } from "react";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
 import Button from "@/components/ui/Button/Button";
-import { useReducedMotion } from "@/lib/animation/reducedMotion";
+import { gsap, SplitText, useGSAP } from "@/lib/animation/gsap";
 import { useMagneticCursor } from "@/lib/animation/useMagneticCursor";
-import { ease } from "@/lib/animation/presets";
+import { duration, ease, media } from "@/lib/animation/presets";
 import { usePortfolio } from "@/components/PortfolioProvider";
+import HeroField, { type HeroFieldHandle } from "./HeroField";
 
-gsap.registerPlugin(useGSAP);
-
+/**
+ * The page's one orchestrated load moment: the name rises out of a mask a
+ * letter at a time and, as it lands, sends the first pulse out through the
+ * signal field behind it (HeroField); the details fade up beneath. The
+ * animated parts are held back by a CSS gate
+ * only when JS is running and motion is allowed (see `.js [data-hero-name]` in
+ * globals.css), so without JS or with reduced motion the hero is simply there.
+ */
 export default function Hero() {
     const { content } = usePortfolio();
     const rootRef = useRef<HTMLElement>(null);
-    const reducedMotion = useReducedMotion();
-    useMagneticCursor(rootRef, { strength: 35, radius: 180 });
+    const glowRef = useRef<HTMLDivElement>(null);
+    const fieldRef = useRef<HeroFieldHandle>(null);
+    useMagneticCursor(rootRef, { strength: 18, radius: 160 });
 
     useGSAP(
         () => {
-            if (reducedMotion) return;
+            const mm = gsap.matchMedia();
 
-            const tl = gsap.timeline({ delay: 0.3 });
+            mm.add(media.motion, () => {
+                const tl = gsap.timeline({ delay: 0.15 });
 
-            // Badge pops in
-            tl.from("[data-badge]", {
-                opacity: 0,
-                scale: 0.5,
-                rotation: -12,
-                duration: 0.6,
-                ease: ease.elastic,
+                // autoSplit re-splits if the display font swaps in after the
+                // first split; returning the tween lets SplitText resume it.
+                SplitText.create("[data-hero-name]", {
+                    type: "chars",
+                    charsClass: "hero-char",
+                    mask: "chars",
+                    autoSplit: true,
+                    onSplit(self) {
+                        self.chars.forEach((char) => char.setAttribute("data-magnetic", ""));
+                        const reveal = tl.from(self.chars, {
+                            yPercent: 110,
+                            duration: duration.slow,
+                            ease: ease.reveal,
+                            stagger: 0.035,
+                        }, 0);
+                        // The chars are now masked out of sight, so the CSS
+                        // gate holding the heading back can be lifted.
+                        gsap.set(self.elements, { visibility: "visible" });
+                        return reveal;
+                    },
+                });
+
+                // fromTo, not from: the CSS gate means these start hidden, and
+                // from() would record "hidden" as the state to animate back to.
+                tl.fromTo("[data-hero-fade]", { autoAlpha: 0, y: 12 }, {
+                    autoAlpha: 1,
+                    y: 0,
+                    duration: duration.base,
+                    ease: ease.out,
+                    stagger: 0.08,
+                }, 0.55);
+
+                tl.from(glowRef.current, { autoAlpha: 0, scale: 0.8, duration: 1.6, ease: ease.out }, 0);
+
+                // The name has mostly landed by now; its arrival is the first
+                // signal through the field.
+                tl.call(() => {
+                    const name = rootRef.current?.querySelector("[data-hero-name]");
+                    if (name) fieldRef.current?.pulseFrom(name);
+                }, [], 0.6);
             });
-
-            // Name characters reveal with clip-path
-            tl.fromTo(
-                "[data-char]",
-                {
-                    clipPath: "inset(0 100% 0 0)",
-                    opacity: 0,
-                },
-                {
-                    clipPath: "inset(0 0% 0 0)",
-                    opacity: 1,
-                    duration: 0.5,
-                    ease: ease.snap,
-                    stagger: 0.04,
-                },
-                "-=0.2"
-            );
-
-            // Subtitle words animate in
-            tl.from("[data-subtitle] [data-word]", {
-                y: 60,
-                opacity: 0,
-                rotation: 4,
-                duration: 0.6,
-                ease: ease.back,
-                stagger: 0.06,
-            }, "-=0.3");
-
-            // Buttons expand in
-            tl.from("[data-cta]", {
-                scaleX: 0,
-                opacity: 0,
-                duration: 0.5,
-                ease: ease.back,
-                stagger: 0.12,
-            }, "-=0.3");
-
-            // Decorative elements rotate continuously
-            gsap.to("[data-deco-spin]", {
-                rotation: 360,
-                duration: 12,
-                ease: "none",
-                repeat: -1,
-            });
-
-            // Decorative shapes float
-            gsap.to("[data-deco-float-1]", {
-                y: -25,
-                x: 15,
-                rotation: 10,
-                duration: 4,
-                ease: "sine.inOut",
-                repeat: -1,
-                yoyo: true,
-            });
-            gsap.to("[data-deco-float-2]", {
-                y: 20,
-                x: -20,
-                rotation: -8,
-                duration: 5,
-                ease: "sine.inOut",
-                repeat: -1,
-                yoyo: true,
-            });
-
-
         },
-        { scope: rootRef, dependencies: [reducedMotion] }
+        { scope: rootRef }
     );
 
-    // Split subtitle into words for animation
-    const nameChars = content.profile.name.split("").map((char, i) => ({
-        char: char === " " ? "\u00A0" : char,
-        key: `${char}-${i}`,
-    }));
-    const subtitleWords = content.profile.tagline.split(" ");
+    const scrollTo = (id: string) => (event: React.MouseEvent) => {
+        event.preventDefault();
+        document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
+    };
 
     return (
         <section
             ref={rootRef}
-            className="relative z-0 min-h-screen flex items-center justify-center overflow-hidden bg-bg stripe-bg pt-24"
+            className="relative z-0 min-h-svh flex items-center overflow-hidden bg-bg pt-28 pb-20"
         >
-            {/* Decorative geometric shapes */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {/* Large bordered circle */}
-                <div
-                    data-deco-float-1
-                    className="absolute -top-20 -right-20 w-[300px] h-[300px] rounded-full border border-border opacity-10"
-                />
-                {/* Spinning star */}
-                <div
-                    data-deco-spin
-                    className="absolute top-[15%] right-[10%] font-display text-8xl font-semibold text-accent opacity-20 select-none"
-                >
-                    ✦
-                </div>
-                {/* Floating square */}
-                <div
-                    data-deco-float-2
-                    className="absolute bottom-[20%] left-[5%] w-24 h-24 border border-border opacity-10 rotate-12"
-                />
-                {/* Arrow decoration */}
-                <div
-                    data-deco-float-1
-                    className="absolute top-[60%] right-[8%] font-display text-7xl font-semibold text-accent opacity-15 select-none"
-                >
-                    →
-                </div>
-                {/* Large rotated rectangle */}
-                <div className="absolute -bottom-10 -left-10 w-60 h-40 border border-border opacity-5 rotate-[-8deg]" />
+            <div aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center">
+                <div ref={glowRef} className="hero-glow" />
             </div>
+            <HeroField ref={fieldRef} host={rootRef} />
+            <div aria-hidden className="hero-grain pointer-events-none absolute inset-0" />
 
-            <div className="relative z-10 mx-auto max-w-5xl px-6 text-center">
-                {/* Available badge */}
-                <div data-badge className="mb-8 inline-block">
-                    <span className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-border bg-bg-card font-mono text-xs tracking-[0.04em] text-text-secondary">
-                        <span className="w-1.5 h-1.5 rounded-full bg-success" />
+            <div className="relative z-10 mx-auto w-full max-w-6xl px-6">
+                <p data-hero-fade className="mb-10">
+                    <span className="inline-flex items-center gap-2.5 rounded-full border border-border bg-bg-card/70 px-3.5 py-1.5 text-sm text-text-secondary backdrop-blur-sm">
+                        <span className="relative flex size-2">
+                            <span className="absolute inset-0 rounded-full bg-success opacity-60 motion-safe:animate-ping" />
+                            <span className="relative size-2 rounded-full bg-success" />
+                        </span>
                         {content.profile.availability}
                     </span>
-                </div>
-
-                {/* Giant name — rendered as JSX spans to avoid hydration mismatch */}
-                <div className="mb-4">
-                    <p className="font-mono text-xs md:text-sm uppercase tracking-[0.08em] text-text-muted mb-4">
-                        Hi, I&apos;m
-                    </p>
-                    <h1 className="font-display text-[clamp(2.5rem,6vw,4rem)] font-semibold leading-[1.05] tracking-tight text-text-primary">
-                        {nameChars.map(({ char, key }) => (
-                            <span
-                                key={key}
-                                data-char
-                                data-magnetic
-                                className="inline-block cursor-default"
-                                style={{ willChange: "transform, opacity, clip-path" }}
-                            >
-                                {char}
-                            </span>
-                        ))}
-                    </h1>
-                </div>
-
-                {/* Subtitle with word-level animation */}
-                <p
-                    data-subtitle
-                    className="text-text-secondary text-lg sm:text-xl md:text-2xl max-w-3xl mx-auto mb-12 leading-relaxed font-medium overflow-hidden"
-                >
-                    {subtitleWords.map((word, i) => (
-                        <span
-                            key={i}
-                            data-word
-                            className="inline-block mr-[0.3em]"
-                        >
-                            {word}
-                        </span>
-                    ))}
                 </p>
 
-                {/* CTAs */}
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <div data-cta className="origin-left">
-                        <Button
-                            href="#projects"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                document.querySelector("#projects")?.scrollIntoView({ behavior: "smooth" });
-                            }}
-                        >
-                            View My Work
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
+                {/* Keyed on the name so a content refresh remounts the heading
+                    instead of React reconciling text that SplitText replaced. */}
+                <h1
+                    key={content.profile.name}
+                    data-hero-name
+                    className="type-narrow text-display text-text-primary"
+                >
+                    {content.profile.name}
+                </h1>
+
+                {/* Not animated: on phones this is the LCP element, and hiding it
+                    until JS runs cost seconds of LCP on a throttled device. */}
+                <p
+                    className="mt-8 max-w-2xl text-lg sm:text-xl leading-relaxed text-text-secondary"
+                >
+                    {content.profile.tagline}
+                </p>
+
+                <div className="mt-12 flex flex-col sm:flex-row gap-3">
+                    <div data-hero-fade>
+                        <Button href="#projects" onClick={scrollTo("#projects")}>
+                            View my work
                         </Button>
                     </div>
-                    <div data-cta className="origin-left">
-                        <Button
-                            variant="outline"
-                            href="#contact"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                document.querySelector("#contact")?.scrollIntoView({ behavior: "smooth" });
-                            }}
-                        >
-                            Get In Touch
+                    <div data-hero-fade>
+                        <Button variant="outline" href="#contact" onClick={scrollTo("#contact")}>
+                            Get in touch
                         </Button>
                     </div>
                 </div>
 
+                <p data-hero-fade className="mt-16 text-sm text-text-muted">
+                    {content.profile.title}
+                    {content.profile.location && <>, based in {content.profile.location}</>}
+                </p>
             </div>
         </section>
     );

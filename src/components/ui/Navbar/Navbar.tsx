@@ -1,13 +1,9 @@
 "use client";
 
-import { ease } from "@/lib/animation/presets";
-import { useReducedMotion } from "@/lib/animation/reducedMotion";
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ResumeDownloadButton from "@/components/resume/ResumeDownloadButton";
-
-gsap.registerPlugin(useGSAP);
+import { Flip, gsap, ScrollTrigger, useGSAP } from "@/lib/animation/gsap";
+import { duration, ease, media } from "@/lib/animation/presets";
 
 const NAV_LINKS = [
     { label: "About", href: "#about" },
@@ -16,162 +12,187 @@ const NAV_LINKS = [
     { label: "Contact", href: "#contact" },
 ];
 
+/* Below this the bar never hides: there is nothing to make room for yet. */
+const HIDE_AFTER_PX = 400;
+
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [activeSection, setActiveSection] = useState("");
     const navRef = useRef<HTMLElement>(null);
     const mobileMenuRef = useRef<HTMLDivElement>(null);
-    const reducedMotion = useReducedMotion();
+    const pillState = useRef<Flip.FlipState | null>(null);
+    const keepVisible = useRef(false);
+
+    // Read by the scroll handler, which outlives renders.
+    useEffect(() => {
+        keepVisible.current = mobileOpen;
+    }, [mobileOpen]);
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 50);
+        onScroll();
         window.addEventListener("scroll", onScroll, { passive: true });
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
 
-    // Intersection observer for active section highlight
+    // Active section, read at the same 40% line the progress thread uses. The
+    // pill's position is captured before the state change so Flip can slide it;
+    // each link renders its own pill, and the shared data-flip-id is how Flip
+    // knows the new one is the old one moved.
     useEffect(() => {
-        const sections = NAV_LINKS.map((l) =>
-            document.querySelector(l.href)
-        ).filter(Boolean) as Element[];
-
+        const sections = NAV_LINKS.map((l) => document.querySelector(l.href)).filter(Boolean) as Element[];
         const observer = new IntersectionObserver(
             (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        setActiveSection(`#${entry.target.id}`);
-                    }
-                });
+                const entry = entries.find((e) => e.isIntersecting);
+                if (!entry) return;
+                const pill = navRef.current?.querySelector("[data-nav-pill]");
+                if (pill && window.matchMedia(media.motion).matches) pillState.current = Flip.getState(pill);
+                setActiveSection(`#${entry.target.id}`);
             },
             { rootMargin: "-40% 0px -55% 0px" }
         );
-
         sections.forEach((s) => observer.observe(s));
         return () => observer.disconnect();
     }, []);
 
-    // Animate mobile menu links on open
     useGSAP(
         () => {
-            if (!mobileOpen || reducedMotion || !mobileMenuRef.current) return;
-
-            const links = mobileMenuRef.current.querySelectorAll("[data-mobile-link]");
-            gsap.fromTo(
-                links,
-                { x: -60, opacity: 0 },
-                {
-                    x: 0,
-                    opacity: 1,
-                    duration: 0.4,
-                    ease: ease.back,
-                    stagger: 0.08,
-                }
-            );
+            const state = pillState.current;
+            pillState.current = null;
+            const pill = navRef.current?.querySelector("[data-nav-pill]");
+            if (!state || !pill) return;
+            Flip.from(state, { targets: pill, duration: duration.fast, ease: ease.move });
         },
-        { dependencies: [mobileOpen, reducedMotion] }
+        { scope: navRef, dependencies: [activeSection] }
     );
 
-    const handleNavClick = useCallback(
-        (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-            e.preventDefault();
-            const el = document.querySelector(href);
-            if (el) {
-                el.scrollIntoView({ behavior: "smooth" });
-                setMobileOpen(false);
-            }
+    // Hide on the way down, return on the way up. Never with reduced motion,
+    // while the mobile menu is open, or while focus is inside the bar.
+    useGSAP(
+        () => {
+            const mm = gsap.matchMedia();
+            mm.add(media.motion, () => {
+                const nav = navRef.current;
+                if (!nav) return;
+                const show = gsap.quickTo(nav, "yPercent", { duration: duration.fast, ease: ease.out });
+                ScrollTrigger.create({
+                    start: 0,
+                    end: "max",
+                    onUpdate: (self) => {
+                        const hide = self.direction === 1 && self.scroll() > HIDE_AFTER_PX && !keepVisible.current && !nav.contains(document.activeElement);
+                        show(hide ? -100 : 0);
+                    },
+                });
+                const onFocus = () => show(0);
+                nav.addEventListener("focusin", onFocus);
+                return () => nav.removeEventListener("focusin", onFocus);
+            });
         },
-        []
+        { scope: navRef }
     );
+
+    useGSAP(
+        () => {
+            if (!mobileOpen || !mobileMenuRef.current) return;
+            const mm = gsap.matchMedia();
+            mm.add(media.motion, () => {
+                gsap.from(mobileMenuRef.current!.querySelectorAll("[data-mobile-link]"), {
+                    autoAlpha: 0,
+                    y: -8,
+                    duration: duration.fast,
+                    ease: ease.out,
+                    stagger: 0.05,
+                });
+            });
+        },
+        { dependencies: [mobileOpen], revertOnUpdate: true }
+    );
+
+    const handleNavClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+        e.preventDefault();
+        document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
+        setMobileOpen(false);
+    }, []);
 
     return (
         <nav
             ref={navRef}
-            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
-                    ? "bg-bg border-b border-border py-3"
-                    : "bg-transparent py-5"
-                }`}
+            className={`fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,padding] duration-300 ${
+                scrolled || mobileOpen ? "border-b border-border bg-bg/85 py-3 backdrop-blur-md" : "border-b border-transparent bg-transparent py-5"
+            }`}
         >
-            <div className="mx-auto max-w-6xl px-6 flex items-center justify-between">
-                {/* Logo */}
+            <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
                 <a
                     href="#"
-                    className="font-display text-2xl font-semibold tracking-tight text-text-primary hover:text-accent transition-colors group"
+                    className="font-display text-2xl font-semibold tracking-tight text-text-primary transition-colors hover:text-accent"
                     onClick={(e) => {
                         e.preventDefault();
                         window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                 >
-                    <span className="inline-block group-hover:-rotate-6 transition-transform duration-200">SA</span>
-                    <span className="text-accent">.</span>
+                    SA<span className="text-accent">.</span>
                 </a>
 
-                {/* Desktop Nav */}
-                <ul className="hidden md:flex items-center gap-1">
-                    {NAV_LINKS.map((link) => (
-                        <li key={link.href}>
-                            <a
-                                href={link.href}
-                                onClick={(e) => handleNavClick(e, link.href)}
-                                className={`relative block px-4 py-2 text-sm font-medium transition-all duration-200 border ${activeSection === link.href
-                                        ? "bg-text-primary text-bg border-border"
-                                        : "text-text-secondary border-transparent hover:bg-text-primary hover:text-bg hover:border-border"
+                <ul className="hidden items-center gap-1 md:flex">
+                    {NAV_LINKS.map((link) => {
+                        const active = activeSection === link.href;
+                        return (
+                            <li key={link.href} className="relative">
+                                {active && <span data-nav-pill data-flip-id="nav-pill" aria-hidden className="absolute inset-0 rounded-full bg-bg-card ring-1 ring-border-strong" />}
+                                <a
+                                    href={link.href}
+                                    onClick={(e) => handleNavClick(e, link.href)}
+                                    aria-current={active ? "location" : undefined}
+                                    className={`relative block rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200 ${
+                                        active ? "text-text-primary" : "text-text-secondary hover:text-text-primary"
                                     }`}
-                            >
-                                {link.label}
-                            </a>
-                        </li>
-                    ))}
-                    <li className="ml-2">
+                                >
+                                    {link.label}
+                                </a>
+                            </li>
+                        );
+                    })}
+                    <li className="ml-3">
                         <ResumeDownloadButton />
                     </li>
                 </ul>
 
-                {/* Mobile Hamburger */}
                 <button
-                    onClick={() => setMobileOpen(!mobileOpen)}
-                    className="md:hidden relative w-10 h-10 flex flex-col items-center justify-center gap-1.5 border border-border bg-bg"
+                    onClick={() => setMobileOpen((open) => !open)}
+                    className="relative flex size-10 flex-col items-center justify-center gap-1.5 rounded-full border border-border md:hidden"
                     aria-label={mobileOpen ? "Close menu" : "Open menu"}
                     aria-expanded={mobileOpen}
+                    aria-controls="mobile-menu"
                 >
-                    <span
-                        className={`block w-5 h-[3px] bg-text-primary transition-all duration-300 ${mobileOpen ? "rotate-45 translate-y-[9px]" : ""
-                            }`}
-                    />
-                    <span
-                        className={`block w-5 h-[3px] bg-text-primary transition-all duration-300 ${mobileOpen ? "opacity-0 scale-0" : ""
-                            }`}
-                    />
-                    <span
-                        className={`block w-5 h-[3px] bg-text-primary transition-all duration-300 ${mobileOpen ? "-rotate-45 -translate-y-[9px]" : ""
-                            }`}
-                    />
+                    <span className={`block h-0.5 w-4 bg-text-primary transition-transform duration-300 ${mobileOpen ? "translate-y-1 rotate-45" : ""}`} />
+                    <span className={`block h-0.5 w-4 bg-text-primary transition-transform duration-300 ${mobileOpen ? "-translate-y-1 -rotate-45" : ""}`} />
                 </button>
             </div>
 
-            {/* Mobile Menu */}
             <div
+                id="mobile-menu"
                 ref={mobileMenuRef}
-                className={`md:hidden overflow-hidden transition-all duration-300 border-t border-border bg-bg ${mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0 border-t-0"
-                    }`}
+                hidden={!mobileOpen}
+                className="border-t border-border md:hidden"
             >
-                <ul className="px-6 pb-6 pt-4 flex flex-col gap-2">
+                <ul className="flex flex-col gap-1 px-6 pb-6 pt-4">
                     {NAV_LINKS.map((link) => (
                         <li key={link.href}>
                             <a
                                 data-mobile-link
                                 href={link.href}
                                 onClick={(e) => handleNavClick(e, link.href)}
-                                className={`block text-base font-medium px-4 py-3 border transition-all duration-200 ${activeSection === link.href
-                                        ? "bg-text-primary text-bg border-border"
-                                        : "text-text-primary border-transparent hover:border-border hover:bg-surface"
-                                    }`}
+                                aria-current={activeSection === link.href ? "location" : undefined}
+                                className={`block rounded-xl px-4 py-3 text-base font-medium transition-colors ${
+                                    activeSection === link.href ? "bg-bg-card text-text-primary" : "text-text-secondary hover:bg-bg-card hover:text-text-primary"
+                                }`}
                             >
                                 {link.label}
                             </a>
                         </li>
                     ))}
-                    <li>
+                    <li className="mt-2">
                         <ResumeDownloadButton mobile />
                     </li>
                 </ul>

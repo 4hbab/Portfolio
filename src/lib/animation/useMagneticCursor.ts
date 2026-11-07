@@ -1,100 +1,69 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect } from "react";
 import gsap from "gsap";
-import { prefersReducedMotion } from "./reducedMotion";
+import { media } from "./presets";
 
 interface MagneticOptions {
     /** Max displacement in px (default: 30) */
     strength?: number;
     /** Radius around each element that activates the pull, in px (default: 200) */
     radius?: number;
-    /** GSAP ease for the pull movement (default: "power3.out") */
-    ease?: string;
-    /** Duration of the pull tween (default: 0.4) */
-    duration?: number;
-    /** Duration of the return-to-origin tween (default: 0.6) */
-    returnDuration?: number;
 }
 
+type Mover = { x: gsap.QuickToFunc; y: gsap.QuickToFunc };
+
 /**
- * Makes every `[data-magnetic]` element inside `scopeRef`
- * gravitate toward the mouse cursor when it's nearby.
+ * Makes every `[data-magnetic]` element inside `scopeRef` lean toward the
+ * pointer when it is near. One quickTo per element and axis is created lazily
+ * and reused, so a mousemove retargets a running tween instead of starting a
+ * new one. Elements can be added later (SplitText output) and are picked up.
  */
 export function useMagneticCursor<T extends HTMLElement>(
     scopeRef: React.RefObject<T | null>,
-    opts: MagneticOptions = {}
+    { strength = 30, radius = 200 }: MagneticOptions = {}
 ) {
-    const {
-        strength = 30,
-        radius = 200,
-        ease = "power3.out",
-        duration = 0.4,
-        returnDuration = 0.6,
-    } = opts;
+    useEffect(() => {
+        const query = window.matchMedia(media.full);
+        if (!query.matches) return;
 
-    const rafId = useRef<number>(0);
-    const mouse = useRef({ x: 0, y: 0 });
+        const movers = new WeakMap<HTMLElement, Mover>();
+        const moverFor = (el: HTMLElement) => {
+            let mover = movers.get(el);
+            if (!mover) {
+                mover = {
+                    x: gsap.quickTo(el, "x", { duration: 0.5, ease: "power3.out" }),
+                    y: gsap.quickTo(el, "y", { duration: 0.5, ease: "power3.out" }),
+                };
+                movers.set(el, mover);
+            }
+            return mover;
+        };
 
-    const handleMouseMove = useCallback(
-        (e: MouseEvent) => {
-            mouse.current = { x: e.clientX, y: e.clientY };
-
-            // Cancel any pending frame to avoid stacking
-            cancelAnimationFrame(rafId.current);
-
-            rafId.current = requestAnimationFrame(() => {
+        let frame = 0;
+        const onMove = (event: PointerEvent) => {
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() => {
                 const scope = scopeRef.current;
                 if (!scope) return;
-
-                const els = scope.querySelectorAll<HTMLElement>("[data-magnetic]");
-
-                els.forEach((el) => {
+                scope.querySelectorAll<HTMLElement>("[data-magnetic]").forEach((el) => {
                     const rect = el.getBoundingClientRect();
-                    const cx = rect.left + rect.width / 2;
-                    const cy = rect.top + rect.height / 2;
-
-                    const dx = mouse.current.x - cx;
-                    const dy = mouse.current.y - cy;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    if (dist < radius) {
-                        // Normalised pull (1 at centre, 0 at edge of radius)
-                        const pull = 1 - dist / radius;
-                        // Ease the pull for a more natural feel
-                        const easedPull = pull * pull;
-
-                        gsap.to(el, {
-                            x: dx * easedPull * (strength / radius) * 2,
-                            y: dy * easedPull * (strength / radius) * 2,
-                            duration,
-                            ease,
-                            overwrite: "auto",
-                        });
-                    } else {
-                        // Return to origin smoothly
-                        gsap.to(el, {
-                            x: 0,
-                            y: 0,
-                            duration: returnDuration,
-                            ease,
-                            overwrite: "auto",
-                        });
-                    }
+                    const dx = event.clientX - (rect.left + rect.width / 2);
+                    const dy = event.clientY - (rect.top + rect.height / 2);
+                    const dist = Math.hypot(dx, dy);
+                    // Quadratic falloff: 1 at the centre, 0 at the radius edge.
+                    const pull = dist < radius ? (1 - dist / radius) ** 2 * (strength / radius) * 2 : 0;
+                    const mover = moverFor(el);
+                    mover.x(dx * pull);
+                    mover.y(dy * pull);
                 });
             });
-        },
-        [scopeRef, strength, radius, ease, duration, returnDuration]
-    );
-
-    useEffect(() => {
-        if (prefersReducedMotion()) return;
-
-        window.addEventListener("mousemove", handleMouseMove, { passive: true });
-
-        return () => {
-            window.removeEventListener("mousemove", handleMouseMove);
-            cancelAnimationFrame(rafId.current);
         };
-    }, [handleMouseMove]);
+
+        window.addEventListener("pointermove", onMove, { passive: true });
+        return () => {
+            window.removeEventListener("pointermove", onMove);
+            cancelAnimationFrame(frame);
+        };
+    }, [scopeRef, strength, radius]);
 }

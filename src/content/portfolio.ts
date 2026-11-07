@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+// Before any schema is built: zod reads this at construction. Its JIT fast path
+// probes for eval with Function(""), which the site's CSP (no 'unsafe-eval')
+// refuses and the browser logs as a violation. The schemas here are small
+// enough that the interpreted path costs nothing noticeable.
+z.config({ jitless: true });
+
 const ALLOWED_PROTOCOLS = new Set(["https:", "mailto:"]);
 
 /**

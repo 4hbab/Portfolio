@@ -1,233 +1,152 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
+import { useRef, useState } from "react";
 import type { PortfolioProject } from "@/content/portfolio";
-import { useReducedMotion } from "@/lib/animation/reducedMotion";
-import { duration, ease } from "@/lib/animation/presets";
-
-gsap.registerPlugin(useGSAP, ScrollTrigger);
+import { Flip, gsap, ScrollTrigger, useGSAP } from "@/lib/animation/gsap";
+import { duration, ease, media } from "@/lib/animation/presets";
 
 interface ProjectsClientProps {
     projects: PortfolioProject[];
     allTags: string[];
 }
 
-export default function ProjectsClient({
-    projects,
-    allTags,
-}: ProjectsClientProps) {
-    const rootRef = useRef<HTMLDivElement>(null);
-    const gridRef = useRef<HTMLDivElement>(null);
-    const reducedMotion = useReducedMotion();
+/**
+ * One of the page's three bold moments: filtering re-flows the grid with Flip,
+ * so kept cards glide to their new cells while others fade out and in. Every
+ * card stays mounted, because Flip can only animate an element out if it is
+ * still in the DOM when the new layout is measured. Filtered-out cards are hidden
+ * by a plain `display: none` rule, not the `hidden` attribute: Tailwind's base
+ * styles make `[hidden]` !important, which Flip's inline display cannot override
+ * while it animates the card out.
+ */
+export default function ProjectsClient({ projects, allTags }: ProjectsClientProps) {
+    const gridRef = useRef<HTMLUListElement>(null);
+    const flipState = useRef<Flip.FlipState | null>(null);
+    const hasFiltered = useRef(false);
     const [activeFilter, setActiveFilter] = useState("All");
 
-    const filteredProjects =
-        activeFilter === "All"
-            ? projects
-            : projects.filter((p) => p.tags.includes(activeFilter));
-
-    // Runs after React has committed the new card set. Animating from inside
-    // the click handler tweened the cards that were about to be replaced, so
-    // the cards that actually appeared were the ones that never animated.
-    const hasFiltered = useRef(false);
-    useGSAP(
-        () => {
-            if (reducedMotion || !hasFiltered.current) return;
-
-            gsap.fromTo(
-                "[data-card]",
-                { opacity: 0, y: 30, scale: 0.9, rotation: -3 },
-                {
-                    opacity: 1,
-                    y: 0,
-                    scale: 1,
-                    rotation: 0,
-                    duration: duration.fast,
-                    ease: ease.back,
-                    stagger: 0.08,
-                }
-            );
-        },
-        { scope: gridRef, dependencies: [activeFilter, reducedMotion] }
-    );
+    const matches = (project: PortfolioProject) => activeFilter === "All" || project.tags.includes(activeFilter);
+    const visibleCount = projects.filter(matches).length;
 
     const handleFilter = (tag: string) => {
+        if (tag === activeFilter) return;
         hasFiltered.current = true;
+        // Measured before React commits, so Flip knows where everything was.
+        const cards = gridRef.current?.querySelectorAll("[data-card]");
+        if (cards && window.matchMedia(media.motion).matches) flipState.current = Flip.getState(cards);
         setActiveFilter(tag);
     };
 
-    // Scroll-triggered initial reveal
     useGSAP(
         () => {
-            if (reducedMotion) return;
-
-            const cards = gsap.utils.toArray<HTMLElement>("[data-card]");
-            if (!cards.length) return;
-
-            gsap.set(cards, { opacity: 0, y: 40, scale: 0.85, rotation: -5 });
-
-            ScrollTrigger.batch(cards, {
-                start: "top 90%",
-                once: true,
-                onEnter: (batch) => {
-                    gsap.to(batch, {
-                        opacity: 1,
-                        y: 0,
-                        scale: 1,
-                        rotation: 0,
-                        duration: duration.base,
-                        ease: ease.backGentle,
-                        stagger: 0.1,
-                    });
-                },
+            if (!hasFiltered.current) return;
+            const state = flipState.current;
+            flipState.current = null;
+            // Filtering changes the page height, so every trigger below the grid
+            // (section reveals, the progress thread) has to re-measure.
+            if (!state) {
+                ScrollTrigger.refresh();
+                return;
+            }
+            Flip.from(state, {
+                duration: duration.base,
+                ease: ease.move,
+                absolute: true,
+                nested: true,
+                onEnter: (els) => gsap.fromTo(els, { autoAlpha: 0, scale: 0.94 }, { autoAlpha: 1, scale: 1, duration: duration.fast, ease: ease.out, delay: 0.15 }),
+                // Once hidden, the inline fade is cleared: a later filter that
+                // skips Flip (reduced motion) must not find the card still invisible.
+                onLeave: (els) => gsap.to(els, { autoAlpha: 0, scale: 0.94, duration: duration.fast, ease: ease.out, onComplete: () => void gsap.set(els, { clearProps: "opacity,visibility,transform" }) }),
+                onComplete: () => ScrollTrigger.refresh(),
             });
-
         },
-        { scope: rootRef, dependencies: [reducedMotion] }
+        { scope: gridRef, dependencies: [activeFilter] }
     );
 
-    // Web fonts and late layout shift can leave ScrollTrigger measuring against
-    // stale positions, stranding cards at opacity 0. Re-measuring fires the
-    // batch for whatever is genuinely in view. The previous fallback instead
-    // forced *every* card visible after 1.5s, which cancelled the scroll reveal
-    // for anything below the fold, and left its timer running after unmount.
-    useEffect(() => {
-        if (reducedMotion) return;
-        const refresh = window.setTimeout(() => ScrollTrigger.refresh(), 400);
-        return () => window.clearTimeout(refresh);
-    }, [reducedMotion]);
-
     return (
-        <div ref={rootRef}>
-            {/* Filter Chips */}
-            <div
-                className="flex flex-wrap justify-center gap-2 mb-12"
-                role="group"
-                aria-label="Filter projects by technology"
-            >
+        <div>
+            <div className="mb-10 flex flex-wrap gap-2" role="group" aria-label="Filter projects by technology">
                 {["All", ...allTags].map((tag) => (
                     <button
                         key={tag}
                         onClick={() => handleFilter(tag)}
-                        className={`px-4 py-2 text-xs font-medium border transition-all duration-200 ${activeFilter === tag
-                                ? "bg-text-primary text-bg border-border hard-shadow"
-                                : "bg-bg-card text-text-secondary border-border hover:bg-surface hover:text-text-primary"
-                            }`}
                         aria-pressed={activeFilter === tag}
+                        className={`rounded-full border px-4 py-1.5 text-sm transition-colors duration-200 ${
+                            activeFilter === tag
+                                ? "border-accent bg-accent-subtle text-text-primary"
+                                : "border-border text-text-secondary hover:border-border-strong hover:text-text-primary"
+                        }`}
                     >
                         {tag}
                     </button>
                 ))}
             </div>
 
-            {/* Project Cards Grid */}
-            <div ref={gridRef} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProjects.map((project) => (
-                    <ProjectCard key={project.id} project={project} />
-                ))}
-            </div>
+            <p className="sr-only" aria-live="polite">
+                {visibleCount} {visibleCount === 1 ? "project" : "projects"} shown
+            </p>
 
-            {filteredProjects.length === 0 && (
-                <p className="text-center text-text-muted py-12 text-sm">
-                    No projects match this filter.
-                </p>
-            )}
+            <ul ref={gridRef} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {projects.map((project) => (
+                    <li key={project.id} data-card data-filtered-out={matches(project) ? undefined : ""} className="project-slot">
+                        <ProjectCard project={project} />
+                    </li>
+                ))}
+            </ul>
+
+            {visibleCount === 0 && <p className="py-12 text-center text-sm text-text-muted">No projects match this filter.</p>}
         </div>
     );
 }
 
-/* ── Project Card ── */
-
-interface ProjectCardProps {
-    project: PortfolioProject;
+/* The spotlight follows the pointer through two custom properties; no tween
+   and no React state, so moving over a card costs a style write per event. */
+function trackSpotlight(event: React.PointerEvent<HTMLElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty("--mx", `${event.clientX - rect.left}px`);
+    event.currentTarget.style.setProperty("--my", `${event.clientY - rect.top}px`);
 }
 
-function ProjectCard({ project }: ProjectCardProps) {
+function ProjectCard({ project }: { project: PortfolioProject }) {
     return (
-        <div
-            data-card
-            className="group border border-border bg-bg-card overflow-hidden hard-shadow-lg transition-all duration-200"
-        >
-            {/* Card Header — solid accent color */}
-            <div className="h-44 relative overflow-hidden bg-surface border-b border-border">
-                {/* Decorative pattern */}
-                <div className="absolute inset-0 opacity-10" style={{
-                    backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 20px, currentColor 20px, currentColor 21px)",
-                }} />
-
+        <article onPointerMove={trackSpotlight} className="project-card panel flex w-full flex-col p-6 md:p-7">
+            <div className="flex items-start justify-between gap-4">
+                <h3 className="text-h3 font-semibold text-text-primary">{project.title}</h3>
                 {project.featured && (
-                    <span className="absolute top-3 right-3 px-3 py-1.5 bg-accent text-accent-fg font-mono text-xs rounded-md">
-                        Featured
-                    </span>
+                    <span className="shrink-0 rounded-full bg-accent-subtle px-2.5 py-1 text-xs font-medium text-accent">Featured</span>
                 )}
-                <div className="absolute bottom-4 left-5 right-5">
-                    <h3 className="font-display text-lg font-semibold text-text-primary tracking-tight">
-                        {project.title}
-                    </h3>
-                </div>
             </div>
 
-            {/* Card Body */}
-            <div className="p-6">
-                <p className="text-text-secondary text-sm leading-relaxed mb-4">
-                    {project.description}
-                </p>
+            <p className="mt-3 text-sm leading-relaxed text-text-secondary">{project.description}</p>
 
-                {/* Star count (only if > 0) */}
+            <ul className="mt-5 flex flex-wrap gap-1.5">
+                {project.tags.map((tag) => (
+                    <li key={tag} className="rounded-full bg-surface px-2.5 py-1 text-xs text-text-secondary">
+                        {tag}
+                    </li>
+                ))}
+            </ul>
+
+            <div className="mt-auto flex items-center gap-5 pt-6 text-sm">
+                {project.liveUrl && (
+                    <a href={project.liveUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-text-primary hover:text-accent transition-colors">
+                        Live site<span className="sr-only"> for {project.title}</span>
+                    </a>
+                )}
+                {project.repoUrl && (
+                    <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-text-primary hover:text-accent transition-colors">
+                        Source<span className="sr-only"> for {project.title}</span>
+                    </a>
+                )}
                 {project.stars > 0 && (
-                    <div className="flex items-center gap-1.5 text-text-muted font-mono text-xs mb-4">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <span className="ml-auto flex items-center gap-1 text-text-muted tabular-nums" aria-label={`${project.stars} GitHub stars`}>
+                        <svg aria-hidden className="size-3.5" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279-7.416-3.967-7.417 3.967 1.481-8.279-6.064-5.828 8.332-1.151z" />
                         </svg>
                         {project.stars}
-                    </div>
+                    </span>
                 )}
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                    {project.tags.map((tag) => (
-                        <span
-                            key={tag}
-                            className="px-2.5 py-1 rounded-md bg-surface text-text-secondary font-mono text-xs"
-                        >
-                            {tag}
-                        </span>
-                    ))}
-                </div>
-
-                {/* Links */}
-                <div className="flex items-center gap-4 pt-3 border-t border-border">
-                    {project.liveUrl && (
-                        <a
-                            href={project.liveUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 text-text-primary text-sm font-medium hover:text-accent transition-colors"
-                        >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                            </svg>
-                            Live
-                        </a>
-                    )}
-                    {project.repoUrl && (
-                        <a
-                            href={project.repoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 text-text-primary text-sm font-medium hover:text-accent transition-colors"
-                        >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                            </svg>
-                            Code
-                        </a>
-                    )}
-                </div>
             </div>
-        </div>
+        </article>
     );
 }

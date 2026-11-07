@@ -17,9 +17,9 @@ type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 const variantClasses: Record<Variant, string> = {
     primary:
-        "bg-accent text-accent-fg border border-accent hard-shadow",
+        "bg-accent text-accent-fg border border-accent hover:bg-accent-hover hover:border-accent-hover",
     outline:
-        "bg-transparent text-text-primary border border-border hard-shadow hover:bg-surface",
+        "bg-transparent text-text-primary border border-border-strong hover:border-text-secondary hover:bg-bg-card",
 };
 
 export default function Button(props: ButtonProps) {
@@ -27,9 +27,10 @@ export default function Button(props: ButtonProps) {
 
     const classes = `
     inline-flex items-center justify-center gap-2
-    px-7 py-3.5
+    rounded-full px-6 py-3
     text-sm font-medium
-    transition-all duration-200
+    transition-[background-color,border-color,color,transform] duration-200
+    active:scale-[0.97]
     focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2
     ${variantClasses[variant]}
     ${className}

@@ -12,7 +12,8 @@
     "test": "vitest run",
     "verify:content": "vite-node -c vitest.config.ts scripts/verify-content.ts",
     "security:csp": "vite-node -c vitest.config.ts scripts/apply-csp.ts",
-    "resume:pdf": "vite-node -c vitest.config.ts scripts/render-resume.tsx"
+    "resume:pdf": "vite-node -c vitest.config.ts scripts/render-resume.tsx",
+    "cv:tailor": "vite-node -c vitest.config.ts scripts/render-tailored-resume.tsx"
   },
   "dependencies": {
     "@gsap/react": "2.1.2",

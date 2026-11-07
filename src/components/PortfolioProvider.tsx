@@ -67,13 +67,19 @@ export function PortfolioProvider({
         return () => window.removeEventListener("focus", onFocus);
     }, [refresh]);
 
+    // Derived from the snapshot alone. Inside the value memo it was rebuilt on
+    // every isRefreshing toggle, handing every section new arrays for unchanged
+    // content, so effects keyed on content (the experience timeline) re-ran on
+    // each refresh check.
+    const content = useMemo(() => visibleContent(snapshot.content), [snapshot]);
+
     const value = useMemo(() => ({
         ...snapshot,
-        content: visibleContent(snapshot.content),
+        content,
         refresh,
         isRefreshing,
         snapshotError,
-    }), [snapshot, refresh, isRefreshing, snapshotError]);
+    }), [snapshot, content, refresh, isRefreshing, snapshotError]);
 
     return <PortfolioContext.Provider value={value}>{children}</PortfolioContext.Provider>;
 }
